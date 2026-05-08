@@ -21,7 +21,6 @@ class PexelsService:
                 self._method = ImageMethodEnum.PEXELS
         except Exception:
             pass
-        self._client = httpx.AsyncClient(timeout=30.0)
 
     async def search_image(self, keywords: str) -> Optional[str]:
         """根据关键词搜索图片，Pexels 未配置时直接返回 None 触发降级"""
@@ -34,7 +33,8 @@ class PexelsService:
                 f"&per_page={ArticleConstant.PEXELS_PER_PAGE}"
                 f"&orientation={ArticleConstant.PEXELS_ORIENTATION_LANDSCAPE}"
             )
-            response = await self._client.get(url, headers={"Authorization": self._api_key})
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(url, headers={"Authorization": self._api_key})
             if response.status_code != 200:
                 return None
             photos = response.json().get("photos", [])
