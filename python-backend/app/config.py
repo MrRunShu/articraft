@@ -26,6 +26,24 @@ class Settings(BaseSettings):
 
     password_salt: str
 
+    # DeepSeek AI（当前默认启用）
+    deepseek_api_key: str
+    deepseek_model: str = "deepseek-chat"
+
+    # DashScope AI（备用，配好后取消注释并在 .env 中填写）
+    # dashscope_api_key: str = ""
+    # dashscope_model: str = "qwen-plus"
+
+    # Pexels 图片搜索（后续课程第4期启用）
+    # pexels_api_key: str = ""
+
+    # 腾讯云 COS（后续课程第4期启用）
+    # tencent_cos_secret_id: str = ""
+    # tencent_cos_secret_key: str = ""
+    # tencent_cos_region: str = ""
+    # tencent_cos_bucket: str = ""
+    # tencent_cos_domain: str = ""
+
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE),
         env_file_encoding="utf-8",
