@@ -7,6 +7,7 @@ from app.config import settings
 from app.database import database
 from app.routers.health import router as health_router
 from app.routers.user import router as user_router
+from app.routers.article import router as article_router
 from app.exceptions import BusinessException, ErrorCode
 from app.utils.session import init_redis, close_redis
 
@@ -53,3 +54,4 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 app.include_router(health_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
+app.include_router(article_router, prefix="/api")
