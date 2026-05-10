@@ -199,6 +199,12 @@ class ArticleAgentService:
         if cleaned.startswith("```"):
             lines = cleaned.split("\n")
             cleaned = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        # 处理 LLM 偶尔返回 {{...}} / [[...]] 的情况
+        cleaned = cleaned.strip()
+        if cleaned.startswith("{{") and cleaned.endswith("}}"):
+            cleaned = cleaned[1:-1]
+        elif cleaned.startswith("[[") and cleaned.endswith("]]"):
+            cleaned = cleaned[1:-1]
         try:
             return json.loads(cleaned)
         except json.JSONDecodeError as e:
