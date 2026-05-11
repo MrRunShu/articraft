@@ -123,6 +123,10 @@ class ArticleService:
             conditions.append("status = :status")
             values["status"] = request.status
 
+        if request.topic:
+            conditions.append("topic LIKE :topic")
+            values["topic"] = f"%{request.topic}%"
+
         where = " AND ".join(conditions)
         total = await self.db.fetch_val(f"SELECT COUNT(*) FROM article WHERE {where}", values=values)
 

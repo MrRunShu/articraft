@@ -65,6 +65,7 @@ class ArticleCreateRequest(BaseModel):
 
 class ArticleQueryRequest(PageRequest):
     status: Optional[str] = None
+    topic: Optional[str] = None
     user_id: Optional[int] = Field(None, alias="userId")
 
     class Config:

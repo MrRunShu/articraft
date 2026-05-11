@@ -14,7 +14,9 @@
     "lint:eslint": "eslint . --fix --cache"
   },
   "dependencies": {
+    "@types/marked": "^5.0.2",
     "ant-design-vue": "^4.2.6",
+    "marked": "^18.0.3",
     "pinia": "^3.0.4",
     "vue": "^3.5.32",
     "vue-router": "^5.0.4"

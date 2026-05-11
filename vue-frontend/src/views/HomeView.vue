@@ -37,7 +37,7 @@ const userStore = useUserStore()
 
 async function onLogout() {
   await userLogout()
-  userStore.clearUser()
+  userStore.logout()
   message.success('已退出登录')
   router.push('/login')
 }

@@ -19,7 +19,19 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: () => import('@/views/HomeView.vue'),
+      component: () => import('@/views/article/ArticleCreatePage.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/article/list',
+      name: 'articleList',
+      component: () => import('@/views/article/ArticleListPage.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/article/:taskId',
+      name: 'articleDetail',
+      component: () => import('@/views/article/ArticleDetailPage.vue'),
       meta: { requiresAuth: true },
     },
   ],
