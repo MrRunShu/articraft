@@ -18,19 +18,20 @@ class ArticleService:
         self.db = db or database
 
     async def create_article_task_with_quota_check(
-        self, topic: str, login_user: LoginUserVO
+        self, topic: str, login_user: LoginUserVO, style: str = "POPULAR"
     ) -> str:
         """创建文章任务，返回 taskId（配额检查第7期实现）"""
         task_id = str(uuid.uuid4())
         await self.db.execute(
             query="""
-                INSERT INTO article (taskId, userId, topic, status, createTime)
-                VALUES (:taskId, :userId, :topic, :status, :createTime)
+                INSERT INTO article (taskId, userId, topic, style, status, createTime)
+                VALUES (:taskId, :userId, :topic, :style, :status, :createTime)
             """,
             values={
                 "taskId": task_id,
                 "userId": login_user.id,
                 "topic": topic,
+                "style": style,
                 "status": ArticleStatusEnum.PENDING.value,
                 "createTime": datetime.now(),
             },
@@ -162,6 +163,7 @@ class ArticleService:
             taskId=row["taskId"],
             userId=row["userId"],
             topic=row["topic"],
+            style=row._mapping.get("style", "POPULAR"),
             mainTitle=row["mainTitle"],
             subTitle=row["subTitle"],
             outline=json.loads(row["outline"]) if row["outline"] else None,

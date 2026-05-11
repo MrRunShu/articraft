@@ -4,6 +4,7 @@ export interface ArticleVO {
   id: number
   taskId: string
   topic: string
+  style?: string
   mainTitle?: string
   subTitle?: string
   outline?: string
@@ -32,8 +33,30 @@ export interface PageResult<T> {
   size: number
 }
 
-export function createArticle(topic: string) {
-  return request.post<any, { data: string }>('/article/create', { topic })
+export interface ArticleCreateRequest {
+  topic: string
+  style?: string
+}
+
+export const ARTICLE_STYLES = [
+  { value: 'POPULAR', label: '爆款新媒体', icon: '🔥' },
+  { value: 'PROFESSIONAL', label: '专业深度', icon: '📊' },
+  { value: 'HUMOROUS', label: '轻松幽默', icon: '😄' },
+  { value: 'STORYTELLING', label: '故事叙述', icon: '📖' },
+]
+
+export const IMAGE_METHOD_LABELS: Record<string, string> = {
+  PEXELS: 'Pexels 图库',
+  PICSUM: 'Picsum 随机',
+  NANO_BANANA: 'AI 生图',
+  MERMAID: 'Mermaid 流程图',
+  ICONIFY: 'Iconify 图标',
+  EMOJI_PACK: '表情包',
+  SVG_DIAGRAM: 'SVG 示意图',
+}
+
+export function createArticle(params: ArticleCreateRequest) {
+  return request.post<any, { data: string }>('/article/create', params)
 }
 
 export function getArticleDetail(taskId: string) {

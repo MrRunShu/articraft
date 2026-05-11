@@ -16,22 +16,20 @@ from app.schemas.article import (
     TitleResult,
 )
 from app.services.cos_service import CosService
-from app.services.pexels_service import PexelsService
+from app.services.image_search_service import ImageRequest
+from app.services.image_strategy_service import ImageServiceStrategy
 
 logger = logging.getLogger(__name__)
 
 
 class ArticleAgentService:
     def __init__(self):
-        # 当前使用 DeepSeek
-        # 切换到 DashScope：api_key=settings.dashscope_api_key,
-        #                   base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
         self.client = AsyncOpenAI(
             api_key=settings.deepseek_api_key,
             base_url="https://api.deepseek.com",
         )
         self.model = settings.deepseek_model
-        self.pexels_service = PexelsService()
+        self.image_strategy = ImageServiceStrategy()
         self.cos_service = CosService()
 
     async def execute_article_generation(
@@ -88,12 +86,14 @@ class ArticleAgentService:
     async def agent3_generate_content(
         self, state: ArticleState, stream_handler: Callable[[str], None]
     ):
-        """智能体3：生成正文（流式输出）"""
+        """智能体3：生成正文（流式输出，支持风格）"""
         outline_text = json.dumps(
             [s.model_dump() for s in state.outline.sections], ensure_ascii=False
         )
+        style_instruction = PromptConstant.get_style_instruction(state.style)
         prompt = (
             PromptConstant.AGENT3_CONTENT_PROMPT
+            .replace("{styleInstruction}", style_instruction)
             .replace("{mainTitle}", state.title.main_title)
             .replace("{subTitle}", state.title.sub_title)
             .replace("{outline}", outline_text)
@@ -104,7 +104,7 @@ class ArticleAgentService:
         state.content = content
 
     async def agent4_analyze_image_requirements(self, state: ArticleState):
-        """智能体4：分析配图需求（非流式）"""
+        """智能体4：分析配图需求并智能选择配图方式"""
         prompt = (
             PromptConstant.AGENT4_IMAGE_REQUIREMENTS_PROMPT
             .replace("{mainTitle}", state.title.main_title)
@@ -117,23 +117,31 @@ class ArticleAgentService:
     async def agent5_generate_images(
         self, state: ArticleState, stream_handler: Callable[[str], None]
     ):
-        """智能体5：搜索配图（串行，Pexels降级Picsum）"""
+        """智能体5：通过策略选择器获取配图"""
         image_results: List[ImageResult] = []
         for req in state.image_requirements:
-            image_url = await self.pexels_service.search_image(req.keywords)
-            method = self.pexels_service.get_method()
-            if image_url is None:
-                image_url = self.pexels_service.get_fallback_image(req.position)
-                method = ImageMethodEnum.PICSUM
+            try:
+                method_enum = ImageMethodEnum(req.image_method)
+            except ValueError:
+                method_enum = ImageMethodEnum.PEXELS
 
-            final_url = self.cos_service.use_direct_url(image_url)
+            image_request = ImageRequest(
+                keywords=req.keywords,
+                position=req.position,
+                image_method=method_enum,
+                section_title=req.section_title,
+                description=f"{req.type} image for {req.section_title or 'cover'}",
+            )
+            image_data = await self.image_strategy.get_image(image_request)
+            final_url = self.cos_service.use_direct_url(image_data.url)
+
             result = ImageResult(
                 position=req.position,
                 url=final_url,
-                method=method.value,
+                method=image_data.method.value,
                 keywords=req.keywords,
                 sectionTitle=req.section_title,
-                description=f"{req.type} image for {req.section_title or 'cover'}",
+                description=image_request.description,
             )
             image_results.append(result)
 
@@ -166,7 +174,6 @@ class ArticleAgentService:
         state.full_content = "\n".join(result_lines)
 
     async def _call_llm(self, prompt: str) -> str:
-        """非流式调用"""
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
@@ -179,7 +186,6 @@ class ArticleAgentService:
         stream_handler: Callable[[str], None],
         message_type: SseMessageTypeEnum,
     ) -> str:
-        """流式调用：逐块推送 + 拼接完整结果"""
         chunks = []
         stream = await self.client.chat.completions.create(
             model=self.model,
@@ -199,7 +205,6 @@ class ArticleAgentService:
         if cleaned.startswith("```"):
             lines = cleaned.split("\n")
             cleaned = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-        # 处理 LLM 偶尔返回 {{...}} / [[...]] 的情况
         cleaned = cleaned.strip()
         if cleaned.startswith("{{") and cleaned.endswith("}}"):
             cleaned = cleaned[1:-1]

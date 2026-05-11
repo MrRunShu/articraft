@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS article
     taskId         VARCHAR(64)  NOT NULL COMMENT '任务ID（UUID）',
     userId         BIGINT       NOT NULL COMMENT '用户ID',
     topic          VARCHAR(500) NOT NULL COMMENT '选题',
+    style          VARCHAR(20)           DEFAULT 'POPULAR' COMMENT '文章风格：POPULAR/PROFESSIONAL/HUMOROUS/STORYTELLING',
     mainTitle      VARCHAR(200)          COMMENT '主标题',
     subTitle       VARCHAR(300)          COMMENT '副标题',
     outline        TEXT                  COMMENT '大纲（JSON格式）',

@@ -23,8 +23,9 @@ async def create_article(
 ):
     throw_if(not request.topic or not request.topic.strip(), ErrorCode.PARAMS_ERROR, "选题不能为空")
     service = ArticleService(db)
-    task_id = await service.create_article_task_with_quota_check(request.topic, current_user)
-    asyncio.create_task(article_async_service.execute_article_generation(task_id, request.topic))
+    style = request.style or "POPULAR"
+    task_id = await service.create_article_task_with_quota_check(request.topic, current_user, style)
+    asyncio.create_task(article_async_service.execute_article_generation(task_id, request.topic, style))
     return BaseResponse.success(data=task_id, message="任务创建成功")
 
 

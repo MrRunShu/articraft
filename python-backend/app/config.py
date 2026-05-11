@@ -26,23 +26,24 @@ class Settings(BaseSettings):
 
     password_salt: str
 
-    # DeepSeek AI（当前默认启用）
+    # DeepSeek AI
     deepseek_api_key: str
     deepseek_model: str = "deepseek-chat"
 
-    # DashScope AI（备用，配好后取消注释并在 .env 中填写）
-    # dashscope_api_key: str = ""
-    # dashscope_model: str = "qwen-plus"
+    # Pexels 图片搜索
+    pexels_api_key: str = ""
 
-    # Pexels 图片搜索（后续课程第4期启用）
-    # pexels_api_key: str = ""
+    # 腾讯云 COS
+    tencent_cos_secret_id: str = ""
+    tencent_cos_secret_key: str = ""
+    tencent_cos_region: str = ""
+    tencent_cos_bucket: str = ""
+    tencent_cos_domain: str = ""
 
-    # 腾讯云 COS（后续课程第4期启用）
-    # tencent_cos_secret_id: str = ""
-    # tencent_cos_secret_key: str = ""
-    # tencent_cos_region: str = ""
-    # tencent_cos_bucket: str = ""
-    # tencent_cos_domain: str = ""
+    # Nano Banana（Gemini AI 生图）
+    nano_banana_api_key: str = ""
+    nano_banana_model: str = "gemini-2.0-flash-preview-image-generation"
+    nano_banana_aspect_ratio: str = "16:9"
 
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE),

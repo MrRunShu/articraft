@@ -5,31 +5,31 @@ import httpx
 
 from app.constants.article import ArticleConstant
 from app.models.enums import ImageMethodEnum
+from app.services.image_search_service import ImageData, ImageRequest, ImageSearchService
 
 logger = logging.getLogger(__name__)
 
 
-class PexelsService:
+class PexelsService(ImageSearchService):
     def __init__(self):
-        # Pexels API Key 暂未配置，搜索会直接走降级逻辑
         self._api_key: Optional[str] = None
-        self._method = ImageMethodEnum.PICSUM
         try:
             from app.config import settings
-            if hasattr(settings, "pexels_api_key") and settings.pexels_api_key:
+            if settings.pexels_api_key:
                 self._api_key = settings.pexels_api_key
-                self._method = ImageMethodEnum.PEXELS
         except Exception:
             pass
 
-    async def search_image(self, keywords: str) -> Optional[str]:
-        """根据关键词搜索图片，Pexels 未配置时直接返回 None 触发降级"""
+    def get_method(self) -> ImageMethodEnum:
+        return ImageMethodEnum.PEXELS
+
+    async def search(self, request: ImageRequest) -> Optional[ImageData]:
         if not self._api_key:
             return None
         try:
             url = (
                 f"{ArticleConstant.PEXELS_API_URL}"
-                f"?query={keywords}"
+                f"?query={request.keywords}"
                 f"&per_page={ArticleConstant.PEXELS_PER_PAGE}"
                 f"&orientation={ArticleConstant.PEXELS_ORIENTATION_LANDSCAPE}"
             )
@@ -40,14 +40,14 @@ class PexelsService:
             photos = response.json().get("photos", [])
             if not photos:
                 return None
-            return photos[0].get("src", {}).get("large")
+            image_url = photos[0].get("src", {}).get("large")
+            if not image_url:
+                return None
+            return ImageData(url=image_url, method=ImageMethodEnum.PEXELS)
         except Exception as e:
             logger.error(f"Pexels API 调用异常: {e}")
             return None
 
-    def get_fallback_image(self, position: int) -> str:
-        """Picsum 随机图片（降级兜底）"""
-        return ArticleConstant.PICSUM_URL_TEMPLATE.format(position * 100)
-
-    def get_method(self) -> ImageMethodEnum:
-        return self._method
+    def get_fallback_image(self, position: int) -> ImageData:
+        url = ArticleConstant.PICSUM_URL_TEMPLATE.format(position * 100)
+        return ImageData(url=url, method=ImageMethodEnum.PICSUM)

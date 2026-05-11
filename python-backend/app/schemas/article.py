@@ -27,6 +27,7 @@ class ImageRequirement(BaseModel):
     type: str
     section_title: str = Field(..., alias="sectionTitle")
     keywords: str
+    image_method: str = Field(default="PEXELS", alias="imageMethod")
 
     class Config:
         populate_by_name = True
@@ -50,6 +51,7 @@ class ArticleState:
     def __init__(self):
         self.task_id: Optional[str] = None
         self.topic: Optional[str] = None
+        self.style: str = "POPULAR"
         self.title: Optional[TitleResult] = None
         self.outline: Optional[OutlineResult] = None
         self.content: Optional[str] = None
@@ -61,6 +63,7 @@ class ArticleState:
 
 class ArticleCreateRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=500)
+    style: Optional[str] = Field(default="POPULAR")
 
 
 class ArticleQueryRequest(PageRequest):
@@ -77,6 +80,7 @@ class ArticleVO(BaseModel):
     task_id: str = Field(..., alias="taskId")
     user_id: int = Field(..., alias="userId")
     topic: str
+    style: Optional[str] = None
     main_title: Optional[str] = Field(None, alias="mainTitle")
     sub_title: Optional[str] = Field(None, alias="subTitle")
     outline: Optional[Any] = None

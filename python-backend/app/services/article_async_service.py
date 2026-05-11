@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class ArticleAsyncService:
     """后台协程任务：连接 Router 和 AgentService"""
 
-    async def execute_article_generation(self, task_id: str, topic: str):
+    async def execute_article_generation(self, task_id: str, topic: str, style: str = "POPULAR"):
         article_service = ArticleService(database)
         article_agent_service = ArticleAgentService()
         try:
@@ -24,6 +24,7 @@ class ArticleAsyncService:
             state = ArticleState()
             state.task_id = task_id
             state.topic = topic
+            state.style = style
 
             await article_agent_service.execute_article_generation(
                 state,
@@ -50,7 +51,6 @@ class ArticleAsyncService:
             sse_emitter_manager.complete(task_id)
 
     def _send_sse(self, task_id: str, message: str, state: ArticleState):
-        """将 AgentService 的原始消息转换成结构化 JSON 推送"""
         data = self._build_message_data(message, state)
         sse_emitter_manager.send(task_id, json.dumps(data, ensure_ascii=False))
 

@@ -28,10 +28,26 @@
                 <a-textarea
                   v-model:value="topic"
                   placeholder="请输入文章选题，例如：年轻人如何在大城市低成本生活"
-                  :rows="5"
+                  :rows="4"
                   :disabled="generating"
                 />
               </a-form-item>
+
+              <!-- 文章风格选择 -->
+              <a-form-item label="文章风格">
+                <div class="style-grid">
+                  <div
+                    v-for="s in ARTICLE_STYLES"
+                    :key="s.value"
+                    :class="['style-item', { active: selectedStyle === s.value }]"
+                    @click="!generating && (selectedStyle = s.value)"
+                  >
+                    <span class="style-icon">{{ s.icon }}</span>
+                    <span class="style-label">{{ s.label }}</span>
+                  </div>
+                </div>
+              </a-form-item>
+
               <a-form-item>
                 <a-button
                   type="primary"
@@ -60,6 +76,10 @@
               <div v-for="(log, i) in logs" :key="i" class="log-item">
                 <span class="log-icon">{{ log.icon }}</span>
                 <span class="log-text">{{ log.text }}</span>
+                <!-- 配图方式标签 -->
+                <a-tag v-if="log.method" size="small" color="blue" class="method-tag">
+                  {{ IMAGE_METHOD_LABELS[log.method] ?? log.method }}
+                </a-tag>
               </div>
               <div v-if="generating && logs.length === 0" class="log-empty">
                 等待连接...
@@ -77,6 +97,10 @@
             <template #title>
               <a-space>
                 文章预览
+                <a-tag v-if="selectedStyle" color="purple">
+                  {{ ARTICLE_STYLES.find(s => s.value === selectedStyle)?.icon }}
+                  {{ ARTICLE_STYLES.find(s => s.value === selectedStyle)?.label }}
+                </a-tag>
                 <a-button
                   v-if="taskId && status === 'COMPLETED'"
                   size="small"
@@ -99,7 +123,7 @@
 import { ref, computed, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { createArticle } from '@/api/article'
+import { createArticle, ARTICLE_STYLES, IMAGE_METHOD_LABELS } from '@/api/article'
 import { connectSse, type SseConnection } from '@/utils/sse'
 import { renderMarkdown } from '@/utils/markdown'
 import { useUserStore } from '@/stores/user'
@@ -109,10 +133,11 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const topic = ref('')
+const selectedStyle = ref('POPULAR')
 const taskId = ref('')
 const status = ref('')
 const generating = ref(false)
-const logs = ref<{ icon: string; text: string }[]>([])
+const logs = ref<{ icon: string; text: string; method?: string }[]>([])
 const streamingContent = ref('')
 const logContainer = ref<HTMLElement | null>(null)
 
@@ -142,8 +167,8 @@ const statusText = computed(() => {
   return map[status.value] ?? status.value
 })
 
-function addLog(icon: string, text: string) {
-  logs.value.push({ icon, text })
+function addLog(icon: string, text: string, method?: string) {
+  logs.value.push({ icon, text, method })
   nextTick(() => {
     if (logContainer.value) {
       logContainer.value.scrollTop = logContainer.value.scrollHeight
@@ -159,7 +184,7 @@ async function onGenerate() {
   status.value = 'PENDING'
 
   try {
-    const res = await createArticle(topic.value.trim())
+    const res = await createArticle({ topic: topic.value.trim(), style: selectedStyle.value })
     taskId.value = res.data
     status.value = 'PROCESSING'
     addLog('⏳', '任务创建成功，正在连接进度流...')
@@ -208,7 +233,8 @@ function handleSseMessage(type: string, payload: string) {
     case 'IMAGE_COMPLETE':
       try {
         const img = JSON.parse(payload)
-        addLog('🖼️', `配图就绪：${img.sectionTitle || '封面'}`)
+        const sectionName = img.sectionTitle || '封面'
+        addLog('🖼️', `配图就绪：${sectionName}`, img.method)
       } catch {
         addLog('🖼️', '配图就绪')
       }
@@ -287,9 +313,20 @@ onUnmounted(() => {
   line-height: 1.6;
   border-bottom: 1px solid #f0f0f0;
   font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .log-icon {
-  margin-right: 8px;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+.log-text {
+  flex: 1;
+}
+.method-tag {
+  flex-shrink: 0;
+  font-size: 11px;
 }
 .log-empty {
   color: #aaa;
@@ -309,6 +346,41 @@ onUnmounted(() => {
 .task-id {
   font-size: 12px;
   color: #888;
+}
+
+/* 风格选择器 */
+.style-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.style-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border: 1.5px solid #d9d9d9;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.style-item:hover {
+  border-color: #4096ff;
+  color: #4096ff;
+}
+.style-item.active {
+  border-color: #4096ff;
+  background: #e6f4ff;
+  color: #4096ff;
+}
+.style-icon {
+  font-size: 18px;
+  line-height: 1.4;
+}
+.style-label {
+  font-size: 12px;
+  margin-top: 2px;
 }
 
 /* 简单 markdown 样式 */

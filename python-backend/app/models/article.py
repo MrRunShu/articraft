@@ -11,6 +11,7 @@ class Article(Base):
     task_id = Column("taskId", String(64), nullable=False, unique=True)
     user_id = Column("userId", BigInteger, nullable=False)
     topic = Column(String(500), nullable=False)
+    style = Column(String(20), nullable=True, default="POPULAR")
     main_title = Column("mainTitle", String(200), nullable=True)
     sub_title = Column("subTitle", String(300), nullable=True)
     outline = Column(Text, nullable=True)

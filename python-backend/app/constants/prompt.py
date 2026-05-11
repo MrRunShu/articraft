@@ -41,7 +41,7 @@ class PromptConstant:
 }}
 """
 
-    AGENT3_CONTENT_PROMPT = """你是一位资深的内容创作者，擅长撰写优质文章。
+    AGENT3_CONTENT_PROMPT = """你是一位资深的内容创作者，擅长撰写优质文章。{styleInstruction}
 
 根据以下大纲，创作文章正文：
 主标题：{mainTitle}
@@ -61,16 +61,24 @@ class PromptConstant:
 
     AGENT4_IMAGE_REQUIREMENTS_PROMPT = """你是一位专业的新媒体编辑，擅长为文章配图。
 
-根据以下文章内容，分析配图需求：
+根据以下文章内容，分析配图需求并为每个位置选择最合适的配图方式：
 主标题：{mainTitle}
 正文：
 {content}
 
+可选配图方式说明：
+- PEXELS：适合真实场景、人物、风景、商业场景等写实类图片
+- NANO_BANANA：适合创意插画、艺术风格、抽象概念图
+- MERMAID：适合流程图、架构图、时序图、步骤说明等技术类内容
+- ICONIFY：适合图标配合文字说明、符号标记、简洁列表
+- EMOJI_PACK：适合轻松幽默的氛围、情绪表达、娱乐向内容
+- SVG_DIAGRAM：适合概念示意、对比关系、逻辑结构等抽象说明
+
 要求：
 1. 识别需要配图的位置（封面、关键章节等）
 2. 建议配图数量：3-5张
-3. 为每个配图位置生成英文搜索关键词（适合 Pexels 图库检索）
-4. 关键词要准确、具体，能检索到高质量图片
+3. 根据章节内容特点智能选择最合适的配图方式
+4. 为每个配图位置生成英文搜索关键词
 5. sectionTitle 必须与正文中的章节标题完全一致（用于定位插入位置）
 6. position=1 为封面图，sectionTitle 留空
 
@@ -80,13 +88,27 @@ class PromptConstant:
     "position": 1,
     "type": "cover",
     "sectionTitle": "",
-    "keywords": "AI technology office modern"
+    "keywords": "AI technology office modern",
+    "imageMethod": "PEXELS"
   }},
   {{
     "position": 2,
     "type": "section",
     "sectionTitle": "章节标题（与正文完全一致）",
-    "keywords": "business success teamwork"
+    "keywords": "workflow process diagram",
+    "imageMethod": "MERMAID"
   }}
 ]
 """
+
+    # 文章风格指令映射
+    STYLE_INSTRUCTIONS = {
+        "POPULAR": "\n写作风格：爆款新媒体风格，语言接地气，善用排比和金句，情绪化表达，引发共鸣。",
+        "PROFESSIONAL": "\n写作风格：专业深度风格，逻辑严谨，数据支撑，观点鲜明，适合专业读者。",
+        "HUMOROUS": "\n写作风格：轻松幽默风格，善用比喻和梗，语言活泼有趣，让读者在笑声中获取信息。",
+        "STORYTELLING": "\n写作风格：故事叙述风格，以具体案例和故事为主线，情节生动，代入感强。",
+    }
+
+    @classmethod
+    def get_style_instruction(cls, style: str) -> str:
+        return cls.STYLE_INSTRUCTIONS.get(style, "")
