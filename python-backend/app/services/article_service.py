@@ -163,7 +163,7 @@ class ArticleService:
             taskId=row["taskId"],
             userId=row["userId"],
             topic=row["topic"],
-            style=row._mapping.get("style", "POPULAR"),
+            style=dict(row).get("style", "POPULAR"),
             mainTitle=row["mainTitle"],
             subTitle=row["subTitle"],
             outline=json.loads(row["outline"]) if row["outline"] else None,
