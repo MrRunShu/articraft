@@ -151,7 +151,7 @@ class ArticleAgentService:
         state.images = image_results
 
     def merge_images_into_content(self, state: ArticleState):
-        """图文合成：在对应 ## 章节标题后插入配图"""
+        """图文合成：在对应章节标题后插入配图（支持 ##/### 任意层级）"""
         if not state.images:
             state.full_content = state.content
             return
@@ -166,8 +166,9 @@ class ArticleAgentService:
         result_lines = []
         for line in lines:
             result_lines.append(line)
-            if line.startswith("## "):
-                section_title = line[3:].strip()
+            stripped = line.lstrip("#")
+            if stripped and line[0] == "#" and stripped[0] == " ":
+                section_title = stripped[1:].strip()
                 if section_title in non_cover_images:
                     result_lines.append(f"\n![{section_title}]({non_cover_images[section_title]})\n")
 
