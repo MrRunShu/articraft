@@ -123,7 +123,7 @@
 import { ref, computed, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { createArticle, ARTICLE_STYLES, IMAGE_METHOD_LABELS } from '@/api/article'
+import { createArticle, getArticleDetail, ARTICLE_STYLES, IMAGE_METHOD_LABELS } from '@/api/article'
 import { connectSse, type SseConnection } from '@/utils/sse'
 import { renderMarkdown } from '@/utils/markdown'
 import { useUserStore } from '@/stores/user'
@@ -250,6 +250,10 @@ function handleSseMessage(type: string, payload: string) {
       generating.value = false
       addLog('🎉', '文章生成完成！')
       sseConn?.close()
+      getArticleDetail(taskId.value).then((res) => {
+        const full = res.data?.fullContent || res.data?.content
+        if (full) streamingContent.value = full
+      })
       break
     case 'ERROR':
       status.value = 'FAILED'
