@@ -1,4 +1,4 @@
-import json
+﻿import json
 import logging
 from typing import Callable, List
 
@@ -99,8 +99,12 @@ class ArticleAgentService:
 
     async def agent1_generate_title_options(self, state: ArticleState):
         """智能体1：生成标题方案（3-5个）"""
-        prompt = PromptConstant.AGENT1_TITLE_PROMPT.replace("{topic}", state.topic)
-        prompt += self._get_style_prompt(state.style)
+        style_instruction = PromptConstant.get_style_instruction(state.style)
+        prompt = (
+            PromptConstant.AGENT1_TITLE_PROMPT
+            .replace("{topic}", state.topic)
+            .replace("{styleInstruction}", style_instruction)
+        )
         content = await self._call_llm(prompt)
         title_options_data = self._parse_json_response(content, "标题方案", is_list=True)
         state.title_options = [TitleOption(**item) for item in title_options_data]
@@ -116,16 +120,18 @@ class ArticleAgentService:
                 "{userDescription}", state.user_description
             )
 
+        style_instruction = PromptConstant.get_style_instruction(state.style)
         prompt = (
             PromptConstant.AGENT2_OUTLINE_PROMPT
             .replace("{mainTitle}", state.title.main_title)
             .replace("{subTitle}", state.title.sub_title)
             .replace("{descriptionSection}", description_section)
+            .replace("{styleInstruction}", style_instruction)
         )
-        prompt += self._get_style_prompt(state.style)
         content = await self._call_llm_with_streaming(
             prompt, stream_handler, SseMessageTypeEnum.AGENT2_STREAMING
         )
+        logger.info("Agent2 LLM原文前500字: %s", content[:500])
         outline_data = self._parse_json_response(content, "大纲")
         sections = [OutlineSection(**s) for s in outline_data["sections"]]
         state.outline = OutlineResult(sections=sections)
@@ -291,26 +297,62 @@ class ArticleAgentService:
         return "".join(chunks)
 
     def _parse_json_response(self, content: str, name: str, is_list: bool = False):
-        """解析大模型返回的 JSON，容忍 markdown 代码块、双重括号等格式"""
+        """解析大模型返回的 JSON，多层容错：代码块剥离 → 直接解析 → 正则提取 → 全文扫描"""
         import re
+
+        def _try_loads(s: str):
+            try:
+                return json.loads(s)
+            except json.JSONDecodeError:
+                return None
+
+        # 1. 只替换单弯引号（U+2018/U+2019）；双弯引号先不动，避免把字符串内容中的强调词误转为 JSON 分隔符
         cleaned = content.strip()
-        if cleaned.startswith("```"):
-            lines = cleaned.split("\n")
-            cleaned = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-        cleaned = cleaned.strip()
-        if cleaned.startswith("{{") and cleaned.endswith("}}"):
-            cleaned = cleaned[1:-1]
-        elif cleaned.startswith("[[") and cleaned.endswith("]]"):
-            cleaned = cleaned[1:-1]
-        try:
-            return json.loads(cleaned)
-        except json.JSONDecodeError:
-            pattern = r'(\[[\s\S]*\]|\{[\s\S]*\})' if is_list else r'(\{[\s\S]*\}|\[[\s\S]*\])'
-            match = re.search(pattern, cleaned)
-            if match:
-                try:
-                    return json.loads(match.group(1))
-                except json.JSONDecodeError:
-                    pass
-            logger.error("%s解析失败, content=%s", name, content[:300])
-            raise RuntimeError(f"{name}解析失败: LLM 返回内容无法解析为 JSON")
+        cleaned = cleaned.replace('‘', "'").replace('’', "'")
+
+        # 2. 剥离 markdown 代码块（支持 ```json ... ``` 及嵌套前缀文字）
+        code_block = re.search(r'```(?:json)?\s*([\s\S]*?)```', cleaned)
+        if code_block:
+            candidate = code_block.group(1).strip()
+            result = _try_loads(candidate)
+            if result is not None:
+                return result
+
+        # 3. 去掉首行非 JSON 前缀（LLM 可能先输出一句话再给 JSON）
+        for line in cleaned.split('\n'):
+            line = line.strip()
+            if line.startswith(('{', '[')):
+                result = _try_loads(line)
+                if result is not None:
+                    return result
+
+        # 4. 去除双重花/方括号（Jinja 模板转义遗留）
+        stripped = cleaned
+        if stripped.startswith("{{") and stripped.endswith("}}"):
+            stripped = stripped[1:-1]
+        elif stripped.startswith("[[") and stripped.endswith("]]"):
+            stripped = stripped[1:-1]
+        result = _try_loads(stripped)
+        if result is not None:
+            return result
+
+        # 5. 正则从全文中提取第一个完整 JSON 对象或数组
+        for match in re.finditer(r'(\{[\s\S]*\}|\[[\s\S]*\])', cleaned):
+            result = _try_loads(match.group(1))
+            if result is not None:
+                return result
+
+        # 6. 兜底：把双弯引号归一化为直引号后重试（应对 LLM 用弯引号作结构分隔符的情况）
+        cleaned2 = cleaned.replace('“', '"').replace('”', '"')
+        if cleaned2 != cleaned:
+            for step in [cleaned2, cleaned2.split('\n')]:
+                result = _try_loads(cleaned2)
+                if result is not None:
+                    return result
+            for match in re.finditer(r'(\{[\s\S]*\}|\[[\s\S]*\])', cleaned2):
+                result = _try_loads(match.group(1))
+                if result is not None:
+                    return result
+
+        logger.error("%s解析失败, content=%s", name, content[:500])
+        raise RuntimeError(f"{name}解析失败: LLM 返回内容无法解析为 JSON")

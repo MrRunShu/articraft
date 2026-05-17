@@ -1,5 +1,5 @@
 class PromptConstant:
-    AGENT1_TITLE_PROMPT = """你是一位爆款文章标题专家,擅长创作吸引人的标题。
+    AGENT1_TITLE_PROMPT = """你是一位爆款文章标题专家,擅长创作吸引人的标题。{styleInstruction}
 
 根据以下选题,生成 3-5 个爆款文章标题方案:
 选题：{topic}
@@ -10,22 +10,22 @@ class PromptConstant:
 3. 副标题要补充说明,增强吸引力
 4. 标题要简洁有力,不超过30字
 5. 不同方案要有不同的切入角度
-6. 符合新媒体爆款文章的风格
+6. 标题风格要符合上述写作风格要求
 
 请直接返回 JSON 格式,不要有其他内容:
 [
-  {{
+  {
     "mainTitle": "主标题1",
     "subTitle": "副标题1"
-  }},
-  {{
+  },
+  {
     "mainTitle": "主标题2",
     "subTitle": "副标题2"
-  }},
-  {{
+  },
+  {
     "mainTitle": "主标题3",
     "subTitle": "副标题3"
-  }}
+  }
 ]
 """
 
@@ -35,7 +35,7 @@ class PromptConstant:
 请在大纲中充分体现用户的补充要求。
 """
 
-    AGENT2_OUTLINE_PROMPT = """你是一位专业的文章策划师，擅长设计文章结构。
+    AGENT2_OUTLINE_PROMPT = """你是一位专业的文章策划师，擅长设计文章结构。{styleInstruction}
 
 根据以下标题，生成文章大纲：
 主标题：{mainTitle}
@@ -46,17 +46,18 @@ class PromptConstant:
 2. 包含开头引入、核心观点（3-5个）、结尾升华
 3. 每个章节要有明确的标题和核心要点（2-3个）
 4. 适合2000字左右的文章
+5. 章节标题的措辞要符合上述写作风格
 
 请直接返回 JSON 格式，不要有其他内容：
-{{
+{
   "sections": [
-    {{
+    {
       "section": 1,
       "title": "章节标题",
       "points": ["要点1", "要点2"]
-    }}
+    }
   ]
-}}
+}
 """
 
     AGENT3_CONTENT_PROMPT = """你是一位资深的内容创作者，擅长撰写优质文章。{styleInstruction}
@@ -101,20 +102,20 @@ class PromptConstant:
 
 请直接返回 JSON 格式，不要有其他内容：
 [
-  {{
+  {
     "position": 1,
     "type": "cover",
     "sectionTitle": "",
     "keywords": "AI technology office modern",
     "imageMethod": "PEXELS"
-  }},
-  {{
+  },
+  {
     "position": 2,
     "type": "section",
     "sectionTitle": "章节标题（与正文完全一致）",
     "keywords": "workflow process diagram",
     "imageMethod": "MERMAID"
-  }}
+  }
 ]
 """
 
@@ -139,15 +140,15 @@ class PromptConstant:
 5. 章节序号自动重新排序
 
 请直接返回修改后的 JSON 格式大纲，不要有其他内容：
-{{
+{
   "sections": [
-    {{
+    {
       "section": 1,
       "title": "章节标题",
       "points": ["要点1", "要点2"]
-    }}
+    }
   ]
-}}
+}
 """
 
     # 文章风格指令映射
