@@ -163,4 +163,41 @@ class ArticleAsyncService:
             sse_emitter_manager.complete(task_id)
 
 
+    def push_recovery_state(self, task_id: str, article_vo) -> None:
+        """SSE 重连后，根据当前阶段立即推送已保存的数据，恢复前端 UI 状态"""
+        phase = getattr(article_vo, "phase", None)
+        status = getattr(article_vo, "status", None)
+
+        if status == ArticleStatusEnum.FAILED.value:
+            self._send_sse_message(
+                task_id, SseMessageTypeEnum.ERROR,
+                {"message": getattr(article_vo, "errorMessage", None) or "生成失败"},
+            )
+            sse_emitter_manager.complete(task_id)
+
+        elif status == ArticleStatusEnum.COMPLETED.value:
+            self._send_sse_message(
+                task_id, SseMessageTypeEnum.ALL_COMPLETE, {"taskId": task_id}
+            )
+            sse_emitter_manager.complete(task_id)
+
+        elif phase == ArticlePhaseEnum.TITLE_SELECTING.value:
+            title_options = getattr(article_vo, "titleOptions", None)
+            if title_options:
+                self._send_sse_message(
+                    task_id, SseMessageTypeEnum.TITLES_GENERATED,
+                    {"titleOptions": title_options},
+                )
+
+        elif phase == ArticlePhaseEnum.OUTLINE_EDITING.value:
+            outline = getattr(article_vo, "outline", None)
+            if outline:
+                self._send_sse_message(
+                    task_id, SseMessageTypeEnum.OUTLINE_GENERATED,
+                    {"outline": outline},
+                )
+        # TITLE_GENERATING / OUTLINE_GENERATING / CONTENT_GENERATING:
+        # 后台异步任务仍在运行，会自动向新队列推送消息，无需特殊处理
+
+
 article_async_service = ArticleAsyncService()

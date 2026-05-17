@@ -103,9 +103,12 @@ async def get_progress(
 ):
     throw_if(not task_id or not task_id.strip(), ErrorCode.PARAMS_ERROR, "任务ID不能为空")
     service = ArticleService(db)
-    await service.get_article_detail(task_id, current_user)
+    article_vo = await service.get_article_detail(task_id, current_user)
     from app.managers.sse_manager import sse_emitter_manager
-    return sse_emitter_manager.create_emitter(task_id)
+    response = sse_emitter_manager.create_emitter(task_id)
+    # 建立新队列后立即推送恢复数据，前端重连可从当前阶段续流
+    article_async_service.push_recovery_state(task_id, article_vo)
+    return response
 
 
 @router.get("/{task_id}", response_model=BaseResponse[ArticleVO])

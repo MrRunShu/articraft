@@ -204,8 +204,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
   createArticle,
@@ -245,6 +245,7 @@ const PHASE_STEPS = [
 const PHASE_ORDER = PHASE_STEPS.map(s => s.key)
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const topic = ref('')
@@ -266,6 +267,7 @@ const outline = ref<OutlineSection[]>([])
 const article = ref({ mainTitle: '', subTitle: '' })
 
 let sseConn: SseConnection | null = null
+let reconnectAttempts = 0
 
 const previewHtml = computed(() =>
   streamingContent.value ? renderMarkdown(streamingContent.value) : ''
@@ -343,6 +345,7 @@ async function onGenerate() {
     const res = await createArticle({ topic: topic.value.trim(), style: selectedStyle.value })
     taskId.value = res.data
     status.value = 'PROCESSING'
+    router.replace({ query: { taskId: res.data } })
     addLog('⏳', '任务创建成功，正在连接进度流...')
     startSse(res.data)
   } catch {
@@ -352,12 +355,22 @@ async function onGenerate() {
 }
 
 function startSse(id: string) {
+  sseConn?.close()
   sseConn = connectSse(
     id,
-    (type, payload) => handleSseMessage(type, payload),
+    (type, payload) => {
+      reconnectAttempts = 0
+      handleSseMessage(type, payload)
+    },
     () => {
-      if (status.value !== 'COMPLETED') {
-        addLog('❌', 'SSE 连接断开')
+      if (status.value === 'COMPLETED' || status.value === 'FAILED') return
+      if (reconnectAttempts < 3) {
+        reconnectAttempts++
+        addLog('🔄', `连接断开，2秒后重试 (${reconnectAttempts}/3)...`)
+        setTimeout(() => startSse(id), 2000)
+      } else {
+        reconnectAttempts = 0
+        addLog('❌', '多次重连失败，请刷新页面重试')
         isCreating.value = false
       }
     }
@@ -500,6 +513,8 @@ async function handleConfirmOutline(outlineData: OutlineSection[]) {
 
 function resetCreate() {
   sseConn?.close()
+  sseConn = null
+  reconnectAttempts = 0
   currentPhase.value = 'INPUT'
   topic.value = ''
   selectedStyle.value = 'POPULAR'
@@ -513,7 +528,43 @@ function resetCreate() {
   outlineRaw.value = ''
   logs.value = []
   article.value = { mainTitle: '', subTitle: '' }
+  router.replace({ query: {} })
 }
+
+async function loadAndReconnect(id: string) {
+  try {
+    const res = await getArticleDetail(id)
+    const art = res.data
+    if (!art) return
+
+    taskId.value = id
+    status.value = art.status || ''
+    topic.value = art.topic || ''
+    selectedStyle.value = art.style || 'POPULAR'
+    article.value = { mainTitle: art.mainTitle || '', subTitle: art.subTitle || '' }
+
+    if (art.status === 'COMPLETED') {
+      currentPhase.value = 'COMPLETED'
+      const full = (art as any).fullContent || (art as any).content
+      if (full) streamingContent.value = full
+      addLog('✅', '已加载完成的文章')
+    } else if (art.status === 'FAILED') {
+      addLog('❌', `上次生成失败：${(art as any).errorMessage || '未知错误'}`)
+    } else {
+      isCreating.value = true
+      addLog('🔄', '检测到进行中的任务，正在恢复连接...')
+      startSse(id)
+    }
+  } catch {
+    // 任务不存在或无权限，静默忽略
+    router.replace({ query: {} })
+  }
+}
+
+onMounted(() => {
+  const qTaskId = route.query.taskId as string | undefined
+  if (qTaskId) loadAndReconnect(qTaskId)
+})
 
 async function onLogout() {
   await userLogout()
