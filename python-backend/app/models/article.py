@@ -19,6 +19,15 @@ class Article(Base):
     full_content = Column("fullContent", Text, nullable=True)
     cover_image = Column("coverImage", String(512), nullable=True)
     images = Column(Text, nullable=True)
+    user_description = Column("userDescription", Text, nullable=True, comment="用户补充描述")
+    enabled_image_methods = Column("enabledImageMethods", Text, nullable=True, comment="允许的配图方式列表（JSON格式）")
+    title_options = Column("titleOptions", Text, nullable=True, comment="标题方案列表（JSON格式）")
+    phase = Column(
+        String(50),
+        nullable=False,
+        default="PENDING",
+        comment="阶段：PENDING/TITLE_GENERATING/TITLE_SELECTING/OUTLINE_GENERATING/OUTLINE_EDITING/CONTENT_GENERATING",
+    )
     status = Column(String(20), nullable=False, default="PENDING")
     error_message = Column("errorMessage", Text, nullable=True)
     create_time = Column("createTime", DateTime, nullable=False, default=func.now())

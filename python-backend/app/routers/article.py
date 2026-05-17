@@ -6,7 +6,14 @@ from fastapi import APIRouter, Depends
 from app.database import get_db
 from app.deps import require_login
 from app.exceptions import ErrorCode, throw_if
-from app.schemas.article import ArticleCreateRequest, ArticleQueryRequest, ArticleVO
+from app.schemas.article import (
+    ArticleAiModifyOutlineRequest,
+    ArticleConfirmOutlineRequest,
+    ArticleConfirmTitleRequest,
+    ArticleCreateRequest,
+    ArticleQueryRequest,
+    ArticleVO,
+)
 from app.schemas.common import BaseResponse, DeleteRequest
 from app.schemas.user import LoginUserVO
 from app.services.article_async_service import article_async_service
@@ -24,9 +31,68 @@ async def create_article(
     throw_if(not request.topic or not request.topic.strip(), ErrorCode.PARAMS_ERROR, "选题不能为空")
     service = ArticleService(db)
     style = request.style or "POPULAR"
-    task_id = await service.create_article_task_with_quota_check(request.topic, current_user, style)
-    asyncio.create_task(article_async_service.execute_article_generation(task_id, request.topic, style))
+    task_id = await service.create_article_task_with_quota_check(
+        request.topic,
+        current_user,
+        style,
+        request.enabled_image_methods,
+    )
+    asyncio.create_task(
+        article_async_service.execute_phase1(task_id, request.topic, style)
+    )
     return BaseResponse.success(data=task_id, message="任务创建成功")
+
+
+@router.post("/confirm-title", response_model=BaseResponse[None])
+async def confirm_title(
+    request: ArticleConfirmTitleRequest,
+    db: Database = Depends(get_db),
+    current_user: LoginUserVO = Depends(require_login),
+):
+    """确认标题并输入补充描述，触发阶段2大纲生成"""
+    service = ArticleService(db)
+    await service.confirm_title(
+        task_id=request.task_id,
+        selected_main_title=request.selected_main_title,
+        selected_sub_title=request.selected_sub_title,
+        user_description=request.user_description,
+        login_user=current_user,
+    )
+    asyncio.create_task(article_async_service.execute_phase2(request.task_id))
+    return BaseResponse.success(data=None)
+
+
+@router.post("/confirm-outline", response_model=BaseResponse[None])
+async def confirm_outline(
+    request: ArticleConfirmOutlineRequest,
+    db: Database = Depends(get_db),
+    current_user: LoginUserVO = Depends(require_login),
+):
+    """确认大纲，触发阶段3正文生成"""
+    service = ArticleService(db)
+    await service.confirm_outline(
+        task_id=request.task_id,
+        outline=request.outline,
+        login_user=current_user,
+    )
+    asyncio.create_task(article_async_service.execute_phase3(request.task_id))
+    return BaseResponse.success(data=None)
+
+
+@router.post("/ai-modify-outline", response_model=BaseResponse[list])
+async def ai_modify_outline(
+    request: ArticleAiModifyOutlineRequest,
+    db: Database = Depends(get_db),
+    current_user: LoginUserVO = Depends(require_login),
+):
+    """AI 修改大纲（同步返回修改结果）"""
+    service = ArticleService(db)
+    modified_outline = await service.ai_modify_outline(
+        task_id=request.task_id,
+        modify_suggestion=request.modify_suggestion,
+        login_user=current_user,
+    )
+    return BaseResponse.success(data=[s.model_dump() for s in modified_outline])
 
 
 @router.get("/progress/{task_id}")

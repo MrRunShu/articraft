@@ -13,6 +13,7 @@ from app.schemas.article import (
     ImageResult,
     OutlineResult,
     OutlineSection,
+    TitleOption,
     TitleResult,
 )
 from app.services.cos_service import CosService
@@ -32,56 +33,103 @@ class ArticleAgentService:
         self.image_strategy = ImageServiceStrategy()
         self.cos_service = CosService()
 
-    async def execute_article_generation(
+    # ─── 三阶段入口 ───────────────────────────────────────────────────────────
+
+    async def execute_phase1_generate_titles(
         self,
         state: ArticleState,
         stream_handler: Callable[[str], None],
     ):
-        """执行完整的5智能体文章生成流程"""
+        """阶段1：生成标题方案（3-5个）"""
         try:
-            await self.agent1_generate_title(state)
+            logger.info("阶段1：开始生成标题方案, taskId=%s", state.task_id)
+            await self.agent1_generate_title_options(state)
             stream_handler(SseMessageTypeEnum.AGENT1_COMPLETE.value)
+            logger.info(
+                "阶段1：标题方案生成成功, taskId=%s, count=%s",
+                state.task_id,
+                len(state.title_options or []),
+            )
+        except Exception as e:
+            logger.error("阶段1失败, taskId=%s, error=%s", state.task_id, e)
+            raise RuntimeError(f"标题方案生成失败: {e}")
 
+    async def execute_phase2_generate_outline(
+        self,
+        state: ArticleState,
+        stream_handler: Callable[[str], None],
+    ):
+        """阶段2：生成大纲（流式输出）"""
+        try:
+            logger.info("阶段2：开始生成大纲, taskId=%s", state.task_id)
             await self.agent2_generate_outline(state, stream_handler)
             stream_handler(SseMessageTypeEnum.AGENT2_COMPLETE.value)
+            logger.info("阶段2：大纲生成成功, taskId=%s", state.task_id)
+        except Exception as e:
+            logger.error("阶段2失败, taskId=%s, error=%s", state.task_id, e)
+            raise RuntimeError(f"大纲生成失败: {e}")
 
+    async def execute_phase3_generate_content(
+        self,
+        state: ArticleState,
+        stream_handler: Callable[[str], None],
+    ):
+        """阶段3：生成正文、配图和合并内容"""
+        try:
+            logger.info("阶段3：开始生成正文, taskId=%s", state.task_id)
             await self.agent3_generate_content(state, stream_handler)
             stream_handler(SseMessageTypeEnum.AGENT3_COMPLETE.value)
 
+            logger.info("阶段3：开始分析配图需求, taskId=%s", state.task_id)
             await self.agent4_analyze_image_requirements(state)
             stream_handler(SseMessageTypeEnum.AGENT4_COMPLETE.value)
 
+            logger.info("阶段3：开始生成配图, taskId=%s", state.task_id)
             await self.agent5_generate_images(state, stream_handler)
             stream_handler(SseMessageTypeEnum.AGENT5_COMPLETE.value)
 
+            logger.info("阶段3：开始图文合成, taskId=%s", state.task_id)
             self.merge_images_into_content(state)
             stream_handler(SseMessageTypeEnum.MERGE_COMPLETE.value)
         except Exception as e:
-            raise RuntimeError(f"文章生成失败: {str(e)}")
+            logger.error("阶段3失败, taskId=%s, error=%s", state.task_id, e)
+            raise RuntimeError(f"正文生成失败: {e}")
 
-    async def agent1_generate_title(self, state: ArticleState):
-        """智能体1：生成标题（非流式）"""
+    # ─── 各智能体实现 ─────────────────────────────────────────────────────────
+
+    async def agent1_generate_title_options(self, state: ArticleState):
+        """智能体1：生成标题方案（3-5个）"""
         prompt = PromptConstant.AGENT1_TITLE_PROMPT.replace("{topic}", state.topic)
+        prompt += self._get_style_prompt(state.style)
         content = await self._call_llm(prompt)
-        title_data = self._parse_json_response(content, "标题")
-        state.title = TitleResult(**title_data)
+        title_options_data = self._parse_json_response(content, "标题方案", is_list=True)
+        state.title_options = [TitleOption(**item) for item in title_options_data]
+        logger.info("智能体1：标题方案生成成功, count=%s", len(state.title_options))
 
     async def agent2_generate_outline(
         self, state: ArticleState, stream_handler: Callable[[str], None]
     ):
-        """智能体2：生成大纲（流式输出）"""
+        """智能体2：生成大纲（流式输出，支持补充描述）"""
+        description_section = ""
+        if state.user_description and state.user_description.strip():
+            description_section = PromptConstant.AGENT2_DESCRIPTION_SECTION.replace(
+                "{userDescription}", state.user_description
+            )
+
         prompt = (
             PromptConstant.AGENT2_OUTLINE_PROMPT
             .replace("{mainTitle}", state.title.main_title)
             .replace("{subTitle}", state.title.sub_title)
+            .replace("{descriptionSection}", description_section)
         )
+        prompt += self._get_style_prompt(state.style)
         content = await self._call_llm_with_streaming(
             prompt, stream_handler, SseMessageTypeEnum.AGENT2_STREAMING
         )
         outline_data = self._parse_json_response(content, "大纲")
-        state.outline = OutlineResult(
-            sections=[OutlineSection(**s) for s in outline_data["sections"]]
-        )
+        sections = [OutlineSection(**s) for s in outline_data["sections"]]
+        state.outline = OutlineResult(sections=sections)
+        logger.info("智能体2：大纲生成成功, sections=%s", len(sections))
 
     async def agent3_generate_content(
         self, state: ArticleState, stream_handler: Callable[[str], None]
@@ -112,7 +160,21 @@ class ArticleAgentService:
         )
         content = await self._call_llm(prompt)
         requirements_data = self._parse_json_response(content, "配图需求", is_list=True)
-        state.image_requirements = [ImageRequirement(**r) for r in requirements_data]
+
+        # 过滤 enabledImageMethods
+        enabled = state.enabled_image_methods
+        filtered = []
+        for r in requirements_data:
+            method = r.get("imageMethod", "PEXELS")
+            if enabled and method not in enabled:
+                try:
+                    method = next(m for m in enabled if m != "SVG_DIAGRAM")
+                except StopIteration:
+                    method = "PEXELS"
+                r["imageMethod"] = method
+            filtered.append(r)
+
+        state.image_requirements = [ImageRequirement(**r) for r in filtered]
 
     async def agent5_generate_images(
         self, state: ArticleState, stream_handler: Callable[[str], None]
@@ -150,6 +212,29 @@ class ArticleAgentService:
 
         state.images = image_results
 
+    async def ai_modify_outline(
+        self,
+        main_title: str,
+        sub_title: str,
+        current_outline: List[OutlineSection],
+        modify_suggestion: str,
+    ) -> List[OutlineSection]:
+        """AI 修改大纲（同步返回修改结果）"""
+        current_outline_json = json.dumps(
+            [item.model_dump() for item in current_outline],
+            ensure_ascii=False,
+        )
+        prompt = (
+            PromptConstant.AI_MODIFY_OUTLINE_PROMPT
+            .replace("{mainTitle}", main_title)
+            .replace("{subTitle}", sub_title)
+            .replace("{currentOutline}", current_outline_json)
+            .replace("{modifySuggestion}", modify_suggestion)
+        )
+        content = await self._call_llm(prompt)
+        outline_data = self._parse_json_response(content, "修改后的大纲")
+        return [OutlineSection(**s) for s in outline_data["sections"]]
+
     def merge_images_into_content(self, state: ArticleState):
         """图文合成：在对应章节标题后插入配图（支持 ##/### 任意层级）"""
         if not state.images:
@@ -173,6 +258,11 @@ class ArticleAgentService:
                     result_lines.append(f"\n![{section_title}]({non_cover_images[section_title]})\n")
 
         state.full_content = "\n".join(result_lines)
+
+    # ─── 内部工具 ─────────────────────────────────────────────────────────────
+
+    def _get_style_prompt(self, style: str) -> str:
+        return PromptConstant.get_style_instruction(style)
 
     async def _call_llm(self, prompt: str) -> str:
         response = await self.client.chat.completions.create(
@@ -204,12 +294,10 @@ class ArticleAgentService:
         """解析大模型返回的 JSON，容忍 markdown 代码块、双重括号等格式"""
         import re
         cleaned = content.strip()
-        # 去掉 ```json ... ``` 或 ``` ... ```
         if cleaned.startswith("```"):
             lines = cleaned.split("\n")
             cleaned = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
         cleaned = cleaned.strip()
-        # 去掉双重括号 {{ }} / [[ ]]
         if cleaned.startswith("{{") and cleaned.endswith("}}"):
             cleaned = cleaned[1:-1]
         elif cleaned.startswith("[[") and cleaned.endswith("]]"):
@@ -217,7 +305,6 @@ class ArticleAgentService:
         try:
             return json.loads(cleaned)
         except json.JSONDecodeError:
-            # 兜底：用正则提取第一个完整 JSON 对象或数组
             pattern = r'(\[[\s\S]*\]|\{[\s\S]*\})' if is_list else r'(\{[\s\S]*\}|\[[\s\S]*\])'
             match = re.search(pattern, cleaned)
             if match:
@@ -225,5 +312,5 @@ class ArticleAgentService:
                     return json.loads(match.group(1))
                 except json.JSONDecodeError:
                     pass
-            logger.error(f"{name}解析失败, content={content[:300]}")
+            logger.error("%s解析失败, content=%s", name, content[:300])
             raise RuntimeError(f"{name}解析失败: LLM 返回内容无法解析为 JSON")

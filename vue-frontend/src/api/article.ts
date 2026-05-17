@@ -70,3 +70,43 @@ export function listArticle(params: ArticleQueryRequest) {
 export function deleteArticle(id: number) {
   return request.post<any, { data: boolean }>('/article/delete', { id })
 }
+
+export interface TitleOption {
+  mainTitle: string
+  subTitle: string
+}
+
+export interface OutlineSection {
+  section: number
+  title: string
+  points: string[]
+}
+
+export interface ConfirmTitleRequest {
+  taskId: string
+  selectedMainTitle: string
+  selectedSubTitle: string
+  userDescription?: string
+}
+
+export interface ConfirmOutlineRequest {
+  taskId: string
+  outline: OutlineSection[]
+}
+
+export interface AiModifyOutlineRequest {
+  taskId: string
+  modifySuggestion: string
+}
+
+export function confirmTitle(params: ConfirmTitleRequest) {
+  return request.post<any, { data: null }>('/article/confirm-title', params)
+}
+
+export function confirmOutline(params: ConfirmOutlineRequest) {
+  return request.post<any, { data: null }>('/article/confirm-outline', params)
+}
+
+export function aiModifyOutline(params: AiModifyOutlineRequest) {
+  return request.post<any, { data: OutlineSection[] }>('/article/ai-modify-outline', params)
+}

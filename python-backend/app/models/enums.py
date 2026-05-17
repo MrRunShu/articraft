@@ -43,10 +43,34 @@ class ArticleStyleEnum(str, Enum):
     STORYTELLING = "STORYTELLING"  # 故事叙述
 
 
+class ArticlePhaseEnum(str, Enum):
+    """文章阶段枚举（Day5 用户交互增强）"""
+
+    PENDING = "PENDING"
+    TITLE_GENERATING = "TITLE_GENERATING"
+    TITLE_SELECTING = "TITLE_SELECTING"
+    OUTLINE_GENERATING = "OUTLINE_GENERATING"
+    OUTLINE_EDITING = "OUTLINE_EDITING"
+    CONTENT_GENERATING = "CONTENT_GENERATING"
+
+    def can_transition_to(self, target_phase: "ArticlePhaseEnum") -> bool:
+        transitions = {
+            ArticlePhaseEnum.PENDING: {ArticlePhaseEnum.TITLE_GENERATING},
+            ArticlePhaseEnum.TITLE_GENERATING: {ArticlePhaseEnum.TITLE_SELECTING},
+            ArticlePhaseEnum.TITLE_SELECTING: {ArticlePhaseEnum.OUTLINE_GENERATING},
+            ArticlePhaseEnum.OUTLINE_GENERATING: {ArticlePhaseEnum.OUTLINE_EDITING},
+            ArticlePhaseEnum.OUTLINE_EDITING: {ArticlePhaseEnum.CONTENT_GENERATING},
+            ArticlePhaseEnum.CONTENT_GENERATING: set(),
+        }
+        return target_phase in transitions.get(self, set())
+
+
 class SseMessageTypeEnum(str, Enum):
     AGENT1_COMPLETE = "AGENT1_COMPLETE"
+    TITLES_GENERATED = "TITLES_GENERATED"
     AGENT2_STREAMING = "AGENT2_STREAMING"
     AGENT2_COMPLETE = "AGENT2_COMPLETE"
+    OUTLINE_GENERATED = "OUTLINE_GENERATED"
     AGENT3_STREAMING = "AGENT3_STREAMING"
     AGENT3_COMPLETE = "AGENT3_COMPLETE"
     AGENT4_COMPLETE = "AGENT4_COMPLETE"
