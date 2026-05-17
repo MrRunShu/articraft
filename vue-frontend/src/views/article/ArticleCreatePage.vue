@@ -534,7 +534,7 @@ function resetCreate() {
 async function loadAndReconnect(id: string) {
   try {
     const res = await getArticleDetail(id)
-    const art = res.data
+    const art = res.data as any
     if (!art) return
 
     taskId.value = id
@@ -545,18 +545,28 @@ async function loadAndReconnect(id: string) {
 
     if (art.status === 'COMPLETED') {
       currentPhase.value = 'COMPLETED'
-      const full = (art as any).fullContent || (art as any).content
+      const full = art.fullContent || art.content
       if (full) streamingContent.value = full
       addLog('✅', '已加载完成的文章')
     } else if (art.status === 'FAILED') {
-      addLog('❌', `上次生成失败：${(art as any).errorMessage || '未知错误'}`)
+      addLog('❌', `上次生成失败：${art.errorMessage || '未知错误'}`)
     } else {
-      isCreating.value = true
-      addLog('🔄', '检测到进行中的任务，正在恢复连接...')
+      // 直接从 REST 响应读 phase，无需等待 SSE round-trip
+      if (art.phase === 'TITLE_SELECTING' && art.titleOptions?.length) {
+        titleOptions.value = art.titleOptions
+        currentPhase.value = 'TITLE_SELECTING'
+        addLog('🔄', `已恢复标题选择，共 ${titleOptions.value.length} 个方案`)
+      } else if (art.phase === 'OUTLINE_EDITING' && art.outline?.length) {
+        outline.value = art.outline
+        currentPhase.value = 'OUTLINE_EDITING'
+        addLog('🔄', '已恢复大纲编辑')
+      } else {
+        isCreating.value = true
+        addLog('🔄', '检测到进行中的任务，正在恢复连接...')
+      }
       startSse(id)
     }
   } catch {
-    // 任务不存在或无权限，静默忽略
     router.replace({ query: {} })
   }
 }
