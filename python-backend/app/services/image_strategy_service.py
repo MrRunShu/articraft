@@ -8,8 +8,6 @@ from app.services.image_search_service import ImageData, ImageRequest, ImageSear
 from app.services.mermaid_service import MermaidService
 from app.services.nano_banana_service import NanoBananaService
 from app.services.pexels_service import PexelsService
-from app.services.svg_diagram_service import SvgDiagramService
-
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +20,6 @@ class ImageServiceStrategy:
         self._mermaid = MermaidService()
         self._iconify = IconifyService()
         self._emoji_pack = EmojiPackService()
-        self._svg_diagram = SvgDiagramService()
 
         self._services: dict[ImageMethodEnum, ImageSearchService] = {
             ImageMethodEnum.PEXELS: self._pexels,
@@ -30,7 +27,8 @@ class ImageServiceStrategy:
             ImageMethodEnum.MERMAID: self._mermaid,
             ImageMethodEnum.ICONIFY: self._iconify,
             ImageMethodEnum.EMOJI_PACK: self._emoji_pack,
-            ImageMethodEnum.SVG_DIAGRAM: self._svg_diagram,
+            # SVG_DIAGRAM 下架，路由到 Mermaid
+            ImageMethodEnum.SVG_DIAGRAM: self._mermaid,
         }
 
     async def get_image(self, request: ImageRequest) -> ImageData:
