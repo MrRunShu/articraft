@@ -133,7 +133,7 @@ class ArticleAgentService:
                 description=f"{req.type} image for {req.section_title or 'cover'}",
             )
             image_data = await self.image_strategy.get_image(image_request)
-            final_url = self.cos_service.use_direct_url(image_data.url)
+            final_url = await self.cos_service.upload_async(image_data.url)
 
             result = ImageResult(
                 position=req.position,
