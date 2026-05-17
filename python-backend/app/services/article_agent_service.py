@@ -201,18 +201,29 @@ class ArticleAgentService:
         return "".join(chunks)
 
     def _parse_json_response(self, content: str, name: str, is_list: bool = False):
-        """解析大模型返回的 JSON，去掉可能的 markdown 代码块标记"""
+        """解析大模型返回的 JSON，容忍 markdown 代码块、双重括号等格式"""
+        import re
         cleaned = content.strip()
+        # 去掉 ```json ... ``` 或 ``` ... ```
         if cleaned.startswith("```"):
             lines = cleaned.split("\n")
             cleaned = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
         cleaned = cleaned.strip()
+        # 去掉双重括号 {{ }} / [[ ]]
         if cleaned.startswith("{{") and cleaned.endswith("}}"):
             cleaned = cleaned[1:-1]
         elif cleaned.startswith("[[") and cleaned.endswith("]]"):
             cleaned = cleaned[1:-1]
         try:
             return json.loads(cleaned)
-        except json.JSONDecodeError as e:
-            logger.error(f"{name}解析失败, content={content[:200]}, error={e}")
-            raise RuntimeError(f"{name}解析失败: {str(e)}")
+        except json.JSONDecodeError:
+            # 兜底：用正则提取第一个完整 JSON 对象或数组
+            pattern = r'(\[[\s\S]*\]|\{[\s\S]*\})' if is_list else r'(\{[\s\S]*\}|\[[\s\S]*\])'
+            match = re.search(pattern, cleaned)
+            if match:
+                try:
+                    return json.loads(match.group(1))
+                except json.JSONDecodeError:
+                    pass
+            logger.error(f"{name}解析失败, content={content[:300]}")
+            raise RuntimeError(f"{name}解析失败: LLM 返回内容无法解析为 JSON")
