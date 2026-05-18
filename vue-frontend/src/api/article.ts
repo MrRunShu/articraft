@@ -36,6 +36,7 @@ export interface PageResult<T> {
 export interface ArticleCreateRequest {
   topic: string
   style?: string
+  enabledImageMethods?: string[]
 }
 
 export const ARTICLE_STYLES = [

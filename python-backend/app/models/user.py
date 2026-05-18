@@ -14,6 +14,7 @@ class User(Base):
     user_avatar = Column("userAvatar", String(1024), nullable=True)
     user_profile = Column("userProfile", String(512), nullable=True)
     user_role = Column("userRole", String(256), nullable=False, default="user")
+    vip_time = Column("vipTime", DateTime, nullable=True)
 
     edit_time = Column("editTime", DateTime, nullable=False, default=func.now())
     create_time = Column("createTime", DateTime, nullable=False, default=func.now())

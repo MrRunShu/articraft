@@ -4,9 +4,10 @@ import uuid
 from datetime import datetime
 from typing import List, Optional, Tuple
 
+from app.constants.user import UserConstant
 from app.database import database
 from app.exceptions import ErrorCode, throw_if, throw_if_not
-from app.models.enums import ArticlePhaseEnum, ArticleStatusEnum
+from app.models.enums import ArticlePhaseEnum, ArticleStatusEnum, ImageMethodEnum
 from app.schemas.article import (
     ArticleQueryRequest,
     ArticleState,
@@ -31,6 +32,20 @@ class ArticleService:
         enabled_image_methods: Optional[List[str]] = None,
     ) -> str:
         """创建文章任务，返回 taskId"""
+        if login_user.user_role not in (UserConstant.VIP_ROLE, UserConstant.ADMIN_ROLE):
+            count = await self.db.fetch_val(
+                query="SELECT COUNT(*) FROM article WHERE userId = :uid AND isDelete = 0",
+                values={"uid": login_user.id},
+            )
+            throw_if(
+                count >= UserConstant.DEFAULT_QUOTA,
+                ErrorCode.NO_AUTH_ERROR,
+                f"免费用户最多创建 {UserConstant.DEFAULT_QUOTA} 篇文章，请升级为 VIP",
+            )
+            vip_only = {ImageMethodEnum.NANO_BANANA.value, ImageMethodEnum.SVG_DIAGRAM.value}
+            if enabled_image_methods:
+                enabled_image_methods = [m for m in enabled_image_methods if m not in vip_only]
+
         task_id = str(uuid.uuid4())
         await self.db.execute(
             query="""

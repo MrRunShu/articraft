@@ -47,6 +47,7 @@ class UserVO(BaseModel):
     user_avatar: Optional[str] = Field(None, alias="userAvatar")
     user_profile: Optional[str] = Field(None, alias="userProfile")
     user_role: str = Field(..., alias="userRole")
+    vip_time: Optional[str] = Field(None, alias="vipTime")
     create_time: str = Field(..., alias="createTime")
 
     class Config:
@@ -60,6 +61,7 @@ class LoginUserVO(BaseModel):
     user_avatar: Optional[str] = Field(None, alias="userAvatar")
     user_profile: Optional[str] = Field(None, alias="userProfile")
     user_role: str = Field(..., alias="userRole")
+    vip_time: Optional[str] = Field(None, alias="vipTime")
     create_time: str = Field(..., alias="createTime")
     update_time: str = Field(..., alias="updateTime")
 

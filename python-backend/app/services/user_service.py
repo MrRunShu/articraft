@@ -67,6 +67,7 @@ class UserService:
             userAvatar=user["userAvatar"],
             userProfile=user["userProfile"],
             userRole=user["userRole"],
+            vipTime=user["vipTime"].isoformat() if user["vipTime"] else None,
             createTime=user["createTime"].isoformat(),
             updateTime=user["updateTime"].isoformat(),
         )
@@ -82,6 +83,7 @@ class UserService:
             userAvatar=user["userAvatar"],
             userProfile=user["userProfile"],
             userRole=user["userRole"],
+            vipTime=user["vipTime"].isoformat() if user["vipTime"] else None,
             createTime=user["createTime"].isoformat(),
         )
 
@@ -113,6 +115,7 @@ class UserService:
                 userAvatar=r["userAvatar"],
                 userProfile=r["userProfile"],
                 userRole=r["userRole"],
+                vipTime=r["vipTime"].isoformat() if r["vipTime"] else None,
                 createTime=r["createTime"].isoformat(),
             )
             for r in rows

@@ -22,6 +22,7 @@ dependencies = [
     "openai==1.58.1",
     "httpx==0.28.1",
     "cos-python-sdk-v5==1.9.32",
+    "stripe>=14.3.0",
 ]
 
 [build-system]

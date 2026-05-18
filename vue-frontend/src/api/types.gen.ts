@@ -157,6 +157,10 @@ export type LoginUserVo = {
      */
     userRole: string;
     /**
+     * Viptime
+     */
+    vipTime?: string | null;
+    /**
      * Createtime
      */
     createTime: string;
@@ -324,6 +328,10 @@ export type UserVo = {
      * Userrole
      */
     userRole: string;
+    /**
+     * Viptime
+     */
+    vipTime?: string | null;
     /**
      * Createtime
      */

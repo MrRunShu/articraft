@@ -82,3 +82,32 @@ class SseMessageTypeEnum(str, Enum):
 
     def get_streaming_prefix(self) -> str:
         return f"{self.value}:"
+
+
+class PaymentStatusEnum(str, Enum):
+    """支付状态枚举"""
+
+    PENDING = "PENDING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+    REFUNDED = "REFUNDED"
+
+
+class ProductTypeEnum(str, Enum):
+    """产品类型枚举"""
+
+    VIP_PERMANENT = "VIP_PERMANENT"
+
+    @property
+    def description(self) -> str:
+        descriptions = {
+            ProductTypeEnum.VIP_PERMANENT: "永久会员",
+        }
+        return descriptions[self]
+
+    @property
+    def price(self) -> str:
+        prices = {
+            ProductTypeEnum.VIP_PERMANENT: "199.00",
+        }
+        return prices[self]

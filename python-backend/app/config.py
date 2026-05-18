@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     nano_banana_model: str = "gemini-2.0-flash-preview-image-generation"
     nano_banana_aspect_ratio: str = "16:9"
 
+    # Stripe 支付
+    stripe_api_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_success_url: str = "http://localhost:5173/vip?payment=success"
+    stripe_cancel_url: str = "http://localhost:5173/vip?payment=cancel"
+
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE),
         env_file_encoding="utf-8",

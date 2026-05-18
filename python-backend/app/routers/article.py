@@ -3,6 +3,7 @@ import asyncio
 from databases import Database
 from fastapi import APIRouter, Depends
 
+from app.constants.user import UserConstant
 from app.database import get_db
 from app.deps import require_login
 from app.exceptions import ErrorCode, throw_if
@@ -85,7 +86,12 @@ async def ai_modify_outline(
     db: Database = Depends(get_db),
     current_user: LoginUserVO = Depends(require_login),
 ):
-    """AI 修改大纲（同步返回修改结果）"""
+    """AI 修改大纲（VIP 专属功能）"""
+    throw_if(
+        current_user.user_role not in (UserConstant.VIP_ROLE, UserConstant.ADMIN_ROLE),
+        ErrorCode.NO_AUTH_ERROR,
+        "AI 修改大纲为 VIP 专属功能",
+    )
     service = ArticleService(db)
     modified_outline = await service.ai_modify_outline(
         task_id=request.task_id,

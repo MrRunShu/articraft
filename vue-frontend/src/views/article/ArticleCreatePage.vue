@@ -1,22 +1,6 @@
 <template>
   <a-layout class="create-page">
-    <a-layout-header class="header">
-      <span class="logo">AI 爆款文章创作器</span>
-      <a-space>
-        <a-button type="link" style="color:#fff" @click="router.push('/article/list')">我的文章</a-button>
-        <a-dropdown>
-          <a-space style="color:#fff;cursor:pointer">
-            <a-avatar>{{ userStore.userInfo?.userName?.charAt(0) ?? 'U' }}</a-avatar>
-            <span>{{ userStore.userInfo?.userName }}</span>
-          </a-space>
-          <template #overlay>
-            <a-menu>
-              <a-menu-item @click="onLogout">退出登录</a-menu-item>
-            </a-menu>
-          </template>
-        </a-dropdown>
-      </a-space>
-    </a-layout-header>
+    <AppHeader />
 
     <a-layout-content class="main">
       <a-row :gutter="16" style="height:100%">
@@ -46,6 +30,33 @@
                   </div>
                 </div>
               </a-form-item>
+
+              <a-form-item label="配图方式">
+                <div class="image-methods">
+                  <div
+                    v-for="m in IMAGE_METHODS"
+                    :key="m.value"
+                    :class="['method-item', { selected: enabledImageMethods.includes(m.value), locked: m.vipOnly && !userStore.isVip }]"
+                    @click="toggleImageMethod(m)"
+                  >
+                    <span class="method-icon">{{ m.icon }}</span>
+                    <span class="method-name">{{ m.label }}</span>
+                    <a-tag v-if="m.vipOnly && !userStore.isVip" color="gold" class="vip-tag">VIP</a-tag>
+                  </div>
+                </div>
+              </a-form-item>
+
+              <a-alert
+                v-if="!userStore.isVip"
+                type="info"
+                show-icon
+                class="quota-alert"
+              >
+                <template #message>
+                  免费用户最多创作 5 篇文章
+                  <a-button type="link" size="small" @click="router.push('/vip')">升级 VIP →</a-button>
+                </template>
+              </a-alert>
 
               <a-form-item v-if="currentPhase === 'INPUT'">
                 <a-button
@@ -220,9 +231,17 @@ import {
 import { connectSse, type SseConnection } from '@/utils/sse'
 import { renderMarkdown } from '@/utils/markdown'
 import { useUserStore } from '@/stores/user'
-import { userLogout } from '@/api/user'
+import AppHeader from '@/components/AppHeader.vue'
 import TitleSelectingStage from './components/TitleSelectingStage.vue'
 import OutlineEditingStage from './components/OutlineEditingStage.vue'
+
+const IMAGE_METHODS = [
+  { value: 'PEXELS', label: 'Pexels 图库', icon: '📷', vipOnly: false },
+  { value: 'NANO_BANANA', label: 'AI 生图', icon: '🎨', vipOnly: true },
+  { value: 'MERMAID', label: 'Mermaid 图', icon: '📊', vipOnly: false },
+  { value: 'ICONIFY', label: '图标', icon: '🔷', vipOnly: false },
+  { value: 'EMOJI_PACK', label: '表情包', icon: '😄', vipOnly: false },
+]
 
 type Phase =
   | 'INPUT'
@@ -250,6 +269,7 @@ const userStore = useUserStore()
 
 const topic = ref('')
 const selectedStyle = ref('POPULAR')
+const enabledImageMethods = ref<string[]>(['PEXELS', 'MERMAID', 'ICONIFY', 'EMOJI_PACK'])
 const taskId = ref('')
 const status = ref('')
 const isCreating = ref(false)
@@ -332,6 +352,20 @@ function addLog(icon: string, text: string, method?: string) {
   })
 }
 
+function toggleImageMethod(m: { value: string; vipOnly: boolean }) {
+  if (m.vipOnly && !userStore.isVip) {
+    message.warning('该配图方式为 VIP 专属，请先升级')
+    router.push('/vip')
+    return
+  }
+  const idx = enabledImageMethods.value.indexOf(m.value)
+  if (idx >= 0) {
+    enabledImageMethods.value.splice(idx, 1)
+  } else {
+    enabledImageMethods.value.push(m.value)
+  }
+}
+
 async function onGenerate() {
   if (!topic.value.trim()) return
   logs.value = []
@@ -342,7 +376,11 @@ async function onGenerate() {
   currentPhase.value = 'INPUT'
 
   try {
-    const res = await createArticle({ topic: topic.value.trim(), style: selectedStyle.value })
+    const res = await createArticle({
+      topic: topic.value.trim(),
+      style: selectedStyle.value,
+      enabledImageMethods: enabledImageMethods.value.length ? enabledImageMethods.value : undefined,
+    })
     taskId.value = res.data
     status.value = 'PROCESSING'
     router.replace({ query: { taskId: res.data } })
@@ -518,6 +556,7 @@ function resetCreate() {
   currentPhase.value = 'INPUT'
   topic.value = ''
   selectedStyle.value = 'POPULAR'
+  enabledImageMethods.value = ['PEXELS', 'MERMAID', 'ICONIFY', 'EMOJI_PACK']
   titleOptions.value = []
   outline.value = []
   isCreating.value = false
@@ -576,13 +615,6 @@ onMounted(() => {
   if (qTaskId) loadAndReconnect(qTaskId)
 })
 
-async function onLogout() {
-  await userLogout()
-  userStore.logout()
-  message.success('已退出登录')
-  router.push('/login')
-}
-
 onUnmounted(() => {
   sseConn?.close()
 })
@@ -592,18 +624,6 @@ onUnmounted(() => {
 .create-page {
   min-height: 100vh;
   background: #f0f2f5;
-}
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #001529;
-  padding: 0 24px;
-}
-.logo {
-  color: #fff;
-  font-size: 18px;
-  font-weight: bold;
 }
 .main {
   padding: 16px;
@@ -647,6 +667,34 @@ onUnmounted(() => {
   justify-content: space-between;
 }
 .task-id { font-size: 12px; color: #888; }
+
+/* 配图方式选择器 */
+.image-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.method-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1.5px solid #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  user-select: none;
+  position: relative;
+}
+.method-item:hover { border-color: #4096ff; }
+.method-item.selected { border-color: #4096ff; background: #e6f4ff; color: #4096ff; }
+.method-item.locked { opacity: 0.6; cursor: pointer; }
+.method-icon { flex-shrink: 0; }
+.method-name { flex: 1; }
+.vip-tag { font-size: 10px; padding: 0 3px; }
+.quota-alert { margin-bottom: 8px; font-size: 12px; }
+:deep(.quota-alert .ant-alert-message) { font-size: 12px; }
 
 /* 风格选择器 */
 .style-grid {
