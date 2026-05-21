@@ -2,6 +2,7 @@ import uuid
 from typing import Optional
 from fastapi import Cookie, Depends
 
+from app.constants.user import UserConstant
 from app.exceptions import ErrorCode, BusinessException
 from app.schemas.user import LoginUserVO
 from app.utils.session import get_session
@@ -33,7 +34,7 @@ async def require_login(
 async def require_admin(
     current_user: LoginUserVO = Depends(require_login),
 ) -> LoginUserVO:
-    if current_user.user_role != "admin":
+    if current_user.user_role != UserConstant.ADMIN_ROLE:
         raise BusinessException(ErrorCode.NO_AUTH_ERROR)
     return current_user
 
