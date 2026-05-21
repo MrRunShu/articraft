@@ -5,6 +5,9 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
+from openai import AsyncOpenAI
+
+from app.config import settings
 from app.models.enums import ImageMethodEnum
 from app.services.image_search_service import ImageData, ImageRequest, ImageSearchService
 
@@ -21,6 +24,10 @@ MERMAID_TEMPLATE = """graph TD
 
 class MermaidService(ImageSearchService):
     """Mermaid 流程图服务（CLI 渲染）"""
+
+    def __init__(self):
+        self.client = AsyncOpenAI(api_key=settings.deepseek_api_key, base_url="https://api.deepseek.com")
+        self.model = settings.deepseek_model
 
     def get_method(self) -> ImageMethodEnum:
         return ImageMethodEnum.MERMAID
@@ -44,9 +51,6 @@ class MermaidService(ImageSearchService):
     async def _generate_mermaid_code(self, keywords: str, description: str) -> Optional[str]:
         """用 AI 生成适合内容的 Mermaid 代码"""
         try:
-            from app.config import settings
-            from openai import AsyncOpenAI
-            client = AsyncOpenAI(api_key=settings.deepseek_api_key, base_url="https://api.deepseek.com")
             prompt = f"""根据以下关键词，生成一段简洁的 Mermaid 流程图代码（graph TD 格式）：
 关键词：{keywords}
 说明：{description}
@@ -56,8 +60,8 @@ class MermaidService(ImageSearchService):
 2. 节点文字用中文
 3. 控制在 5-8 个节点以内
 4. 使用 graph TD 方向"""
-            response = await client.chat.completions.create(
-                model=settings.deepseek_model,
+            response = await self.client.chat.completions.create(
+                model=self.model,
                 messages=[{"role": "user", "content": prompt}],
             )
             code = response.choices[0].message.content.strip()

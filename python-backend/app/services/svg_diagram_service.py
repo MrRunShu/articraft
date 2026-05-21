@@ -3,6 +3,9 @@ import logging
 import re
 from typing import Optional
 
+from openai import AsyncOpenAI
+
+from app.config import settings
 from app.models.enums import ImageMethodEnum
 from app.services.image_search_service import ImageData, ImageRequest, ImageSearchService
 
@@ -11,6 +14,10 @@ logger = logging.getLogger(__name__)
 
 class SvgDiagramService(ImageSearchService):
     """SVG 概念示意图服务（AI 生成矢量图）"""
+
+    def __init__(self):
+        self.client = AsyncOpenAI(api_key=settings.deepseek_api_key, base_url="https://api.deepseek.com")
+        self.model = settings.deepseek_model
 
     def get_method(self) -> ImageMethodEnum:
         return ImageMethodEnum.SVG_DIAGRAM
@@ -29,9 +36,6 @@ class SvgDiagramService(ImageSearchService):
 
     async def _generate_svg(self, keywords: str, description: str) -> Optional[str]:
         try:
-            from app.config import settings
-            from openai import AsyncOpenAI
-            client = AsyncOpenAI(api_key=settings.deepseek_api_key, base_url="https://api.deepseek.com")
             prompt = f"""请生成一个简洁的 SVG 概念示意图，用于说明以下内容：
 关键词：{keywords}
 说明：{description}
@@ -43,8 +47,8 @@ class SvgDiagramService(ImageSearchService):
 4. 包含简单的图形和中文文字说明
 5. 风格简洁、现代，适合插图使用
 6. 不要使用外部字体或图片"""
-            response = await client.chat.completions.create(
-                model=settings.deepseek_model,
+            response = await self.client.chat.completions.create(
+                model=self.model,
                 messages=[{"role": "user", "content": prompt}],
             )
             content = response.choices[0].message.content.strip()
