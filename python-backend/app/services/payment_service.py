@@ -78,21 +78,21 @@ class PaymentService:
             await self._handle_checkout_completed(event["data"]["object"])
 
     async def _handle_checkout_completed(self, session):
-        session_id = session["id"]
-        payment_intent_id = session.get("payment_intent")
-        user_id = int(session["metadata"]["user_id"])
-        product_type = session["metadata"]["product_type"]
-
-        existing = await self.db.fetch_one(
-            select(PaymentRecord.id, PaymentRecord.status).where(
-                PaymentRecord.stripe_session_id == session_id
-            )
-        )
-        if not existing or existing["status"] == PaymentStatusEnum.SUCCEEDED.value:
-            return
+        session_id = session.id
+        payment_intent_id = getattr(session, "payment_intent", None)
+        user_id = int(session.metadata["user_id"])
+        product_type = session.metadata["product_type"]
 
         now = datetime.now()
         async with self.db.transaction():
+            existing = await self.db.fetch_one(
+                select(PaymentRecord.id, PaymentRecord.status)
+                .where(PaymentRecord.stripe_session_id == session_id)
+                .with_for_update()
+            )
+            if not existing or existing["status"] == PaymentStatusEnum.SUCCEEDED.value:
+                return
+
             await self.db.execute(
                 update(PaymentRecord)
                 .where(PaymentRecord.stripe_session_id == session_id)

@@ -91,6 +91,13 @@ class UserService:
         )
         return self._row_to_login_user_vo(user)
 
+    async def get_login_user_vo(self, user_id: int) -> LoginUserVO:
+        user = await self.db.fetch_one(
+            select(User).where(and_(User.id == user_id, User.is_delete == 0))
+        )
+        throw_if_not(user, ErrorCode.USER_NOT_EXIST)
+        return self._row_to_login_user_vo(user)
+
     async def get_by_id(self, user_id: int) -> UserVO:
         user = await self.db.fetch_one(
             select(User).where(and_(User.id == user_id, User.is_delete == 0))
