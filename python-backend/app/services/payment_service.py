@@ -2,11 +2,15 @@ import logging
 from datetime import datetime
 
 import stripe
+from sqlalchemy import insert, update, select, and_
 
 from app.config import settings
+from app.constants.user import UserConstant
 from app.database import database
 from app.exceptions import ErrorCode, throw_if
 from app.models.enums import PaymentStatusEnum, ProductTypeEnum
+from app.models.payment import PaymentRecord
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -47,23 +51,17 @@ class PaymentService:
 
         now = datetime.now()
         await self.db.execute(
-            query="""
-                INSERT INTO payment_record
-                    (userId, stripeSessionId, amount, currency, status, productType, description, createTime, updateTime)
-                VALUES
-                    (:userId, :stripeSessionId, :amount, :currency, :status, :productType, :description, :createTime, :updateTime)
-            """,
-            values={
-                "userId": user_id,
-                "stripeSessionId": session.id,
-                "amount": float(product.price),
-                "currency": "usd",
-                "status": PaymentStatusEnum.PENDING.value,
-                "productType": product_type,
-                "description": product.description,
-                "createTime": now,
-                "updateTime": now,
-            },
+            insert(PaymentRecord).values(
+                user_id=user_id,
+                stripe_session_id=session.id,
+                amount=float(product.price),
+                currency="usd",
+                status=PaymentStatusEnum.PENDING.value,
+                product_type=product_type,
+                description=product.description,
+                create_time=now,
+                update_time=now,
+            )
         )
         return session.url, session.id
 
@@ -86,30 +84,28 @@ class PaymentService:
         product_type = session["metadata"]["product_type"]
 
         existing = await self.db.fetch_one(
-            query="SELECT id, status FROM payment_record WHERE stripeSessionId = :sid",
-            values={"sid": session_id},
+            select(PaymentRecord.id, PaymentRecord.status).where(
+                PaymentRecord.stripe_session_id == session_id
+            )
         )
         if not existing or existing["status"] == PaymentStatusEnum.SUCCEEDED.value:
             return
 
         now = datetime.now()
-        await self.db.execute(
-            query="""
-                UPDATE payment_record
-                SET status = :status, stripePaymentIntentId = :intentId, updateTime = :now
-                WHERE stripeSessionId = :sid
-            """,
-            values={
-                "status": PaymentStatusEnum.SUCCEEDED.value,
-                "intentId": payment_intent_id,
-                "now": now,
-                "sid": session_id,
-            },
-        )
-
-        if product_type == ProductTypeEnum.VIP_PERMANENT.value:
+        async with self.db.transaction():
             await self.db.execute(
-                query="UPDATE user SET userRole = 'vip', vipTime = :now WHERE id = :uid AND isDelete = 0",
-                values={"now": now, "uid": user_id},
+                update(PaymentRecord)
+                .where(PaymentRecord.stripe_session_id == session_id)
+                .values(
+                    status=PaymentStatusEnum.SUCCEEDED.value,
+                    stripe_payment_intent_id=payment_intent_id,
+                    update_time=now,
+                )
             )
-            logger.info("用户 %s 已升级为永久 VIP", user_id)
+            if product_type == ProductTypeEnum.VIP_PERMANENT.value:
+                await self.db.execute(
+                    update(User)
+                    .where(and_(User.id == user_id, User.is_delete == 0))
+                    .values(user_role=UserConstant.VIP_ROLE, vip_time=now)
+                )
+                logger.info("用户 %s 已升级为永久 VIP", user_id)
