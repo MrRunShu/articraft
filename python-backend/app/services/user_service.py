@@ -70,6 +70,7 @@ class UserService:
                 user_password=encrypt_password(request.user_password),
                 user_name=f"用户{request.user_account}",
                 user_role=UserConstant.DEFAULT_ROLE,
+                is_delete=0,
             )
         )
         return user_id
@@ -134,6 +135,7 @@ class UserService:
                 user_avatar=request.user_avatar,
                 user_profile=request.user_profile,
                 user_role=request.user_role,
+                is_delete=0,
             )
         )
 

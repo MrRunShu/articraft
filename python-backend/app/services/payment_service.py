@@ -6,6 +6,7 @@ from sqlalchemy import insert, update, select, and_
 
 from app.config import settings
 from app.constants.user import UserConstant
+from app.utils.session import update_session_user_field
 from app.database import database
 from app.exceptions import ErrorCode, throw_if
 from app.models.enums import PaymentStatusEnum, ProductTypeEnum
@@ -108,4 +109,6 @@ class PaymentService:
                     .where(and_(User.id == user_id, User.is_delete == 0))
                     .values(user_role=UserConstant.VIP_ROLE, vip_time=now)
                 )
+                # 同步更新 Redis session，使鉴权立即生效无需重新登录
+                await update_session_user_field(user_id, "userRole", UserConstant.VIP_ROLE)
                 logger.info("用户 %s 已升级为永久 VIP", user_id)

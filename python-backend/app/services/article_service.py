@@ -51,6 +51,7 @@ class ArticleService:
                 enabled_image_methods = [m for m in enabled_image_methods if m not in vip_only]
 
         task_id = str(uuid.uuid4())
+        now = datetime.now()
         await self.db.execute(
             insert(Article).values(
                 task_id=task_id,
@@ -64,7 +65,9 @@ class ArticleService:
                     if enabled_image_methods
                     else None
                 ),
-                create_time=datetime.now(),
+                create_time=now,
+                update_time=now,
+                is_delete=0,
             )
         )
         return task_id

@@ -15,7 +15,7 @@ from app.schemas.user import (
 )
 from app.services.user_service import UserService
 from app.deps import get_current_user, require_login, require_admin, generate_session_id
-from app.utils.session import set_session, remove_session
+from app.utils.session import set_session, remove_session, bind_user_session
 from app.config import settings
 
 router = APIRouter(prefix="/user", tags=["user"])
@@ -35,6 +35,7 @@ async def login(request: UserLoginRequest, response: Response, db: Database = De
 
     session_id = generate_session_id()
     await set_session(session_id, {"user": user.model_dump(by_alias=True)})
+    await bind_user_session(user.id, session_id)
     response.set_cookie(
         key="SESSION",
         value=session_id,
@@ -52,14 +53,8 @@ async def logout(response: Response, current_user: Optional[LoginUserVO] = Depen
 
 
 @router.get("/get/login", response_model=BaseResponse[LoginUserVO])
-async def get_login_user(
-    db: Database = Depends(get_db),
-    current_user: LoginUserVO = Depends(require_login),
-):
-    # 每次从 DB 读取最新数据，确保 VIP 升级等变更立即生效
-    service = UserService(db)
-    fresh_user = await service.get_login_user_vo(current_user.id)
-    return BaseResponse.success(data=fresh_user)
+async def get_login_user(current_user: LoginUserVO = Depends(require_login)):
+    return BaseResponse.success(data=current_user)
 
 
 @router.get("/get", response_model=BaseResponse[UserVO])
