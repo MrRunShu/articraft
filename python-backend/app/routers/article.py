@@ -19,6 +19,8 @@ from app.schemas.common import BaseResponse, DeleteRequest
 from app.schemas.user import LoginUserVO
 from app.services.article_async_service import article_async_service
 from app.services.article_service import ArticleService
+from app.schemas.statistics import AgentExecutionStatsVO
+from app.services.agent_log_service import AgentLogService
 
 router = APIRouter(prefix="/article", tags=["文章管理"])
 
@@ -115,6 +117,18 @@ async def get_progress(
     # 建立新队列后立即推送恢复数据，前端重连可从当前阶段续流
     article_async_service.push_recovery_state(task_id, article_vo)
     return response
+
+
+@router.get("/execution-logs/{task_id}", response_model=BaseResponse[AgentExecutionStatsVO])
+async def get_execution_logs(
+    task_id: str,
+    db: Database = Depends(get_db),
+):
+    """获取任务的智能体执行日志（taskId 本身即为随机字符串，无需额外鉴权）"""
+    throw_if(not task_id or not task_id.strip(), ErrorCode.PARAMS_ERROR, "任务ID不能为空")
+    service = AgentLogService(db)
+    stats = await service.get_execution_stats(task_id)
+    return BaseResponse.success(data=stats)
 
 
 @router.get("/{task_id}", response_model=BaseResponse[ArticleVO])

@@ -9,6 +9,7 @@ from app.routers.health import router as health_router
 from app.routers.user import router as user_router
 from app.routers.article import router as article_router
 from app.routers.payment import router as payment_router
+from app.routers.statistics import router as statistics_router
 from app.exceptions import BusinessException, ErrorCode
 from app.utils.session import init_redis, close_redis
 
@@ -57,3 +58,4 @@ app.include_router(health_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
 app.include_router(article_router, prefix="/api")
 app.include_router(payment_router, prefix="/api")
+app.include_router(statistics_router, prefix="/api")
