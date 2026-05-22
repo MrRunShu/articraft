@@ -75,6 +75,47 @@
               </a-card>
             </a-col>
           </a-row>
+
+          <!-- 执行日志时间线（Day 7）-->
+          <div v-if="executionStats && executionStats.logs.length > 0" style="margin-top:16px">
+            <a-card :bordered="false">
+              <template #title>
+                <a-space>
+                  <ClockCircleOutlined />
+                  <span>执行日志</span>
+                  <a-tag :color="executionStats.overallStatus === 'SUCCESS' ? 'success' : 'error'">
+                    {{ executionStats.overallStatus }}
+                  </a-tag>
+                  <a-tag>总耗时 {{ executionStats.totalDurationMs }}ms</a-tag>
+                </a-space>
+              </template>
+              <template #extra>
+                <a-button type="link" size="small" @click="showLogs = !showLogs">
+                  {{ showLogs ? '收起' : '展开' }}
+                </a-button>
+              </template>
+
+              <div v-show="showLogs">
+                <a-timeline>
+                  <a-timeline-item
+                    v-for="log in executionStats.logs"
+                    :key="log.id"
+                    :color="log.status === 'SUCCESS' ? 'green' : log.status === 'FAILED' ? 'red' : 'blue'"
+                  >
+                    <a-space>
+                      <CheckCircleOutlined v-if="log.status === 'SUCCESS'" style="color:#52c41a" />
+                      <CloseCircleOutlined v-else-if="log.status === 'FAILED'" style="color:#ff4d4f" />
+                      <span style="font-weight:600">{{ agentDisplayName(log.agentName) }}</span>
+                      <a-tag v-if="log.durationMs != null">{{ log.durationMs }}ms</a-tag>
+                    </a-space>
+                    <div v-if="log.errorMessage" style="color:#ff4d4f;font-size:12px;margin-top:4px">
+                      {{ log.errorMessage }}
+                    </div>
+                  </a-timeline-item>
+                </a-timeline>
+              </div>
+            </a-card>
+          </div>
         </template>
 
         <a-empty v-else-if="!loading" description="文章不存在或无权访问" />
@@ -87,7 +128,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { getArticleDetail, type ArticleVO } from '@/api/article'
+import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons-vue'
+import { getArticleDetail, type ArticleVO, getExecutionLogs, type AgentExecutionStatsVO } from '@/api/article'
 import { renderMarkdown } from '@/utils/markdown'
 
 const route = useRoute()
@@ -124,11 +166,41 @@ const statusText = computed(() => {
   return map[article.value?.status ?? ''] ?? ''
 })
 
+// ─── 执行日志（Day 7）──────────────────────────────────────────
+const executionStats = ref<AgentExecutionStatsVO | null>(null)
+const showLogs = ref(false)
+
+const AGENT_NAME_MAP: Record<string, string> = {
+  agent1_generate_titles: '生成标题',
+  agent2_generate_outline: '生成大纲',
+  agent3_generate_content: '生成正文',
+  agent4_analyze_image_requirements: '分析配图需求',
+  agent5_generate_images: '生成配图',
+  agent6_merge_content: '图文合成',
+  ai_modify_outline: 'AI 修改大纲',
+}
+
+function agentDisplayName(name: string) {
+  return AGENT_NAME_MAP[name] || name
+}
+
+async function loadExecutionLogs(taskId: string) {
+  try {
+    const res = await getExecutionLogs(taskId)
+    executionStats.value = res.data ?? null
+  } catch {
+    // 日志加载失败不影响主流程
+  }
+}
+
 async function load() {
   loading.value = true
   try {
     const res = await getArticleDetail(route.params.taskId as string)
     article.value = res.data
+    if (res.data?.taskId) {
+      await loadExecutionLogs(res.data.taskId)
+    }
   } catch {
     article.value = null
   } finally {
