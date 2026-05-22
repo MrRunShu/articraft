@@ -111,3 +111,34 @@ export function confirmOutline(params: ConfirmOutlineRequest) {
 export function aiModifyOutline(params: AiModifyOutlineRequest) {
   return request.post<any, { data: OutlineSection[] }>('/article/ai-modify-outline', params)
 }
+
+// ─── 执行日志（Day 7）─────────────────────────────────────────
+
+export interface AgentLogVO {
+  id: number
+  taskId: string
+  agentName: string
+  startTime?: string
+  endTime?: string
+  durationMs?: number
+  status: string
+  errorMessage?: string
+  prompt?: string
+  inputData?: string
+  outputData?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface AgentExecutionStatsVO {
+  taskId: string
+  totalDurationMs: number
+  agentCount: number
+  agentDurations: Record<string, number>
+  overallStatus: string
+  logs: AgentLogVO[]
+}
+
+export function getExecutionLogs(taskId: string) {
+  return request.get<any, { data: AgentExecutionStatsVO }>(`/article/execution-logs/${taskId}`)
+}
