@@ -4,6 +4,14 @@
     <a-space>
       <a-button type="link" style="color:#fff" @click="router.push('/article/list')">我的文章</a-button>
       <a-button
+        v-if="userStore.isAdmin"
+        type="link"
+        style="color:#fff"
+        @click="router.push('/admin/statistics')"
+      >
+        统计
+      </a-button>
+      <a-button
         v-if="!userStore.isVip"
         type="default"
         size="small"

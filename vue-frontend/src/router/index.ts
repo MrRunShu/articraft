@@ -40,6 +40,12 @@ const router = createRouter({
       component: () => import('@/views/VipPage.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/admin/statistics',
+      name: 'adminStatistics',
+      component: () => import('@/views/admin/StatisticsPage.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 
