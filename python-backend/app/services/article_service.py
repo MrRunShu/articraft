@@ -200,6 +200,7 @@ class ArticleService:
             sub_title=article["subTitle"],
             current_outline=current_outline,
             modify_suggestion=modify_suggestion,
+            task_id=task_id,
         )
         await self.db.execute(
             update(Article).where(Article.task_id == task_id).values(

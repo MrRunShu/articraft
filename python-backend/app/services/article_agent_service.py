@@ -1,11 +1,14 @@
 ﻿import json
 import logging
-from typing import Callable, List
+from contextlib import asynccontextmanager, contextmanager
+from datetime import datetime
+from typing import Callable, List, Optional
 
 from openai import AsyncOpenAI
 
 from app.config import settings
 from app.constants.prompt import PromptConstant
+from app.database import database
 from app.models.enums import ImageMethodEnum, SseMessageTypeEnum
 from app.schemas.article import (
     ArticleState,
@@ -32,6 +35,9 @@ class ArticleAgentService:
         self.model = settings.deepseek_model
         self.image_strategy = ImageServiceStrategy()
         self.cos_service = CosService()
+        # 延迟导入避免循环依赖
+        from app.services.agent_log_service import AgentLogService
+        self.agent_log_service = AgentLogService(database)
 
     # ─── 三阶段入口 ───────────────────────────────────────────────────────────
 
@@ -105,10 +111,17 @@ class ArticleAgentService:
             .replace("{topic}", state.topic)
             .replace("{styleInstruction}", style_instruction)
         )
-        content = await self._call_llm(prompt)
-        title_options_data = self._parse_json_response(content, "标题方案", is_list=True)
-        state.title_options = [TitleOption(**item) for item in title_options_data]
-        logger.info("智能体1：标题方案生成成功, count=%s", len(state.title_options))
+        async with self._agent_log_context(
+            task_id=state.task_id,
+            agent_name="agent1_generate_titles",
+            prompt=prompt,
+            input_data={"topic": state.topic, "style": state.style},
+        ) as log_data:
+            content = await self._call_llm(prompt)
+            title_options_data = self._parse_json_response(content, "标题方案", is_list=True)
+            state.title_options = [TitleOption(**item) for item in title_options_data]
+            log_data["outputData"] = self._safe_json_dumps({"optionsCount": len(state.title_options)})
+            logger.info("智能体1：标题方案生成成功, count=%s", len(state.title_options))
 
     async def agent2_generate_outline(
         self, state: ArticleState, stream_handler: Callable[[str], None]
@@ -128,14 +141,25 @@ class ArticleAgentService:
             .replace("{descriptionSection}", description_section)
             .replace("{styleInstruction}", style_instruction)
         )
-        content = await self._call_llm_with_streaming(
-            prompt, stream_handler, SseMessageTypeEnum.AGENT2_STREAMING
-        )
-        logger.info("Agent2 LLM原文前500字: %s", content[:500])
-        outline_data = self._parse_json_response(content, "大纲")
-        sections = [OutlineSection(**s) for s in outline_data["sections"]]
-        state.outline = OutlineResult(sections=sections)
-        logger.info("智能体2：大纲生成成功, sections=%s", len(sections))
+        async with self._agent_log_context(
+            task_id=state.task_id,
+            agent_name="agent2_generate_outline",
+            prompt=prompt,
+            input_data={
+                "mainTitle": state.title.main_title if state.title else None,
+                "subTitle": state.title.sub_title if state.title else None,
+                "hasUserDescription": bool(state.user_description and state.user_description.strip()),
+            },
+        ) as log_data:
+            content = await self._call_llm_with_streaming(
+                prompt, stream_handler, SseMessageTypeEnum.AGENT2_STREAMING
+            )
+            logger.info("Agent2 LLM原文前500字: %s", content[:500])
+            outline_data = self._parse_json_response(content, "大纲")
+            sections = [OutlineSection(**s) for s in outline_data["sections"]]
+            state.outline = OutlineResult(sections=sections)
+            log_data["outputData"] = self._safe_json_dumps({"sectionsCount": len(state.outline.sections)})
+            logger.info("智能体2：大纲生成成功, sections=%s", len(sections))
 
     async def agent3_generate_content(
         self, state: ArticleState, stream_handler: Callable[[str], None]
@@ -152,10 +176,20 @@ class ArticleAgentService:
             .replace("{subTitle}", state.title.sub_title)
             .replace("{outline}", outline_text)
         )
-        content = await self._call_llm_with_streaming(
-            prompt, stream_handler, SseMessageTypeEnum.AGENT3_STREAMING
-        )
-        state.content = content
+        async with self._agent_log_context(
+            task_id=state.task_id,
+            agent_name="agent3_generate_content",
+            prompt=prompt,
+            input_data={
+                "mainTitle": state.title.main_title if state.title else None,
+                "sectionsCount": len(state.outline.sections) if state.outline else 0,
+            },
+        ) as log_data:
+            content = await self._call_llm_with_streaming(
+                prompt, stream_handler, SseMessageTypeEnum.AGENT3_STREAMING
+            )
+            state.content = content
+            log_data["outputData"] = self._safe_json_dumps({"contentLength": len(content)})
 
     async def agent4_analyze_image_requirements(self, state: ArticleState):
         """智能体4：分析配图需求并智能选择配图方式"""
@@ -164,59 +198,76 @@ class ArticleAgentService:
             .replace("{mainTitle}", state.title.main_title)
             .replace("{content}", state.content)
         )
-        content = await self._call_llm(prompt)
-        requirements_data = self._parse_json_response(content, "配图需求", is_list=True)
+        async with self._agent_log_context(
+            task_id=state.task_id,
+            agent_name="agent4_analyze_image_requirements",
+            prompt=prompt,
+            input_data={
+                "mainTitle": state.title.main_title if state.title else None,
+                "contentLength": len(state.content) if state.content else 0,
+            },
+        ) as log_data:
+            content = await self._call_llm(prompt)
+            requirements_data = self._parse_json_response(content, "配图需求", is_list=True)
 
-        # 过滤 enabledImageMethods
-        enabled = state.enabled_image_methods
-        filtered = []
-        for r in requirements_data:
-            method = r.get("imageMethod", "PEXELS")
-            if enabled and method not in enabled:
-                try:
-                    method = next(m for m in enabled if m != "SVG_DIAGRAM")
-                except StopIteration:
-                    method = "PEXELS"
-                r["imageMethod"] = method
-            filtered.append(r)
+            enabled = state.enabled_image_methods
+            filtered = []
+            for r in requirements_data:
+                method = r.get("imageMethod", "PEXELS")
+                if enabled and method not in enabled:
+                    try:
+                        method = next(m for m in enabled if m != "SVG_DIAGRAM")
+                    except StopIteration:
+                        method = "PEXELS"
+                    r["imageMethod"] = method
+                filtered.append(r)
 
-        state.image_requirements = [ImageRequirement(**r) for r in filtered]
+            state.image_requirements = [ImageRequirement(**r) for r in filtered]
+            log_data["outputData"] = self._safe_json_dumps(
+                {"requirementsCount": len(state.image_requirements)}
+            )
 
     async def agent5_generate_images(
         self, state: ArticleState, stream_handler: Callable[[str], None]
     ):
         """智能体5：通过策略选择器获取配图"""
-        image_results: List[ImageResult] = []
-        for req in state.image_requirements:
-            try:
-                method_enum = ImageMethodEnum(req.image_method)
-            except ValueError:
-                method_enum = ImageMethodEnum.PEXELS
+        async with self._agent_log_context(
+            task_id=state.task_id,
+            agent_name="agent5_generate_images",
+            input_data={"requirementsCount": len(state.image_requirements or [])},
+        ) as log_data:
+            image_results: List[ImageResult] = []
+            for req in state.image_requirements:
+                try:
+                    method_enum = ImageMethodEnum(req.image_method)
+                except ValueError:
+                    method_enum = ImageMethodEnum.PEXELS
 
-            image_request = ImageRequest(
-                keywords=req.keywords,
-                position=req.position,
-                image_method=method_enum,
-                section_title=req.section_title,
-                description=f"{req.type} image for {req.section_title or 'cover'}",
-            )
-            image_data = await self.image_strategy.get_image(image_request)
-            final_url = await self.cos_service.upload_async(image_data.url)
+                image_request = ImageRequest(
+                    keywords=req.keywords,
+                    position=req.position,
+                    image_method=method_enum,
+                    section_title=req.section_title,
+                    description=f"{req.type} image for {req.section_title or 'cover'}",
+                )
+                image_data = await self.image_strategy.get_image(image_request)
+                final_url = await self.cos_service.upload_async(image_data.url)
 
-            result = ImageResult(
-                position=req.position,
-                url=final_url,
-                method=image_data.method.value,
-                keywords=req.keywords,
-                sectionTitle=req.section_title,
-                description=image_request.description,
-            )
-            image_results.append(result)
+                result = ImageResult(
+                    position=req.position,
+                    url=final_url,
+                    method=image_data.method.value,
+                    keywords=req.keywords,
+                    sectionTitle=req.section_title,
+                    description=image_request.description,
+                )
+                image_results.append(result)
 
-            msg = SseMessageTypeEnum.IMAGE_COMPLETE.get_streaming_prefix() + result.model_dump_json(by_alias=True)
-            stream_handler(msg)
+                msg = SseMessageTypeEnum.IMAGE_COMPLETE.get_streaming_prefix() + result.model_dump_json(by_alias=True)
+                stream_handler(msg)
 
-        state.images = image_results
+            state.images = image_results
+            log_data["outputData"] = self._safe_json_dumps({"imagesCount": len(state.images)})
 
     async def ai_modify_outline(
         self,
@@ -224,6 +275,7 @@ class ArticleAgentService:
         sub_title: str,
         current_outline: List[OutlineSection],
         modify_suggestion: str,
+        task_id: Optional[str] = None,
     ) -> List[OutlineSection]:
         """AI 修改大纲（同步返回修改结果）"""
         current_outline_json = json.dumps(
@@ -237,33 +289,130 @@ class ArticleAgentService:
             .replace("{currentOutline}", current_outline_json)
             .replace("{modifySuggestion}", modify_suggestion)
         )
-        content = await self._call_llm(prompt)
-        outline_data = self._parse_json_response(content, "修改后的大纲")
-        return [OutlineSection(**s) for s in outline_data["sections"]]
+        async with self._agent_log_context(
+            task_id=task_id,
+            agent_name="ai_modify_outline",
+            prompt=prompt,
+            input_data={"mainTitle": main_title, "modifySuggestion": modify_suggestion},
+        ) as log_data:
+            content = await self._call_llm(prompt)
+            outline_data = self._parse_json_response(content, "修改后的大纲")
+            sections = [OutlineSection(**s) for s in outline_data["sections"]]
+            log_data["outputData"] = self._safe_json_dumps({"sectionsCount": len(sections)})
+
+        return sections
 
     def merge_images_into_content(self, state: ArticleState):
         """图文合成：在对应章节标题后插入配图（支持 ##/### 任意层级）"""
-        if not state.images:
-            state.full_content = state.content
-            return
+        with self._agent_log_context_sync(
+            task_id=state.task_id,
+            agent_name="agent6_merge_content",
+            input_data={"imagesCount": len(state.images or [])},
+        ) as log_data:
+            if not state.images:
+                state.full_content = state.content
+                log_data["outputData"] = self._safe_json_dumps(
+                    {"fullContentLength": len(state.content or "")}
+                )
+                return
 
-        non_cover_images = {
-            img.section_title: img.url
-            for img in state.images
-            if img.position != 1
+            non_cover_images = {
+                img.section_title: img.url
+                for img in state.images
+                if img.position != 1
+            }
+
+            lines = state.content.split("\n")
+            result_lines = []
+            for line in lines:
+                result_lines.append(line)
+                stripped = line.lstrip("#")
+                if stripped and line[0] == "#" and stripped[0] == " ":
+                    section_title = stripped[1:].strip()
+                    if section_title in non_cover_images:
+                        result_lines.append(f"\n![{section_title}]({non_cover_images[section_title]})\n")
+
+            state.full_content = "\n".join(result_lines)
+            log_data["outputData"] = self._safe_json_dumps(
+                {"fullContentLength": len(state.full_content)}
+            )
+
+    # ─── 日志上下文管理器 ─────────────────────────────────────────
+
+    @asynccontextmanager
+    async def _agent_log_context(
+        self,
+        task_id: Optional[str],
+        agent_name: str,
+        prompt: Optional[str] = None,
+        input_data: Optional[dict] = None,
+    ):
+        """异步智能体日志上下文：yield 前计时，yield 后提交日志（不阻塞主流程）"""
+        start_time = datetime.now()
+        log_data: dict = {
+            "taskId": task_id or "unknown",
+            "agentName": agent_name,
+            "startTime": start_time,
+            "status": "RUNNING",
+            "prompt": prompt,
+            "inputData": self._safe_json_dumps(input_data),
+            "outputData": None,
+            "errorMessage": None,
         }
+        try:
+            yield log_data
+            log_data["status"] = "SUCCESS"
+        except Exception as exc:
+            log_data["status"] = "FAILED"
+            log_data["errorMessage"] = str(exc)
+            raise
+        finally:
+            end_time = datetime.now()
+            log_data["endTime"] = end_time
+            log_data["durationMs"] = int((end_time - start_time).total_seconds() * 1000)
+            self.agent_log_service.save_log_async(log_data)
 
-        lines = state.content.split("\n")
-        result_lines = []
-        for line in lines:
-            result_lines.append(line)
-            stripped = line.lstrip("#")
-            if stripped and line[0] == "#" and stripped[0] == " ":
-                section_title = stripped[1:].strip()
-                if section_title in non_cover_images:
-                    result_lines.append(f"\n![{section_title}]({non_cover_images[section_title]})\n")
+    @contextmanager
+    def _agent_log_context_sync(
+        self,
+        task_id: Optional[str],
+        agent_name: str,
+        prompt: Optional[str] = None,
+        input_data: Optional[dict] = None,
+    ):
+        """同步智能体日志上下文（用于 merge_images_into_content 等同步方法）"""
+        start_time = datetime.now()
+        log_data: dict = {
+            "taskId": task_id or "unknown",
+            "agentName": agent_name,
+            "startTime": start_time,
+            "status": "RUNNING",
+            "prompt": prompt,
+            "inputData": self._safe_json_dumps(input_data),
+            "outputData": None,
+            "errorMessage": None,
+        }
+        try:
+            yield log_data
+            log_data["status"] = "SUCCESS"
+        except Exception as exc:
+            log_data["status"] = "FAILED"
+            log_data["errorMessage"] = str(exc)
+            raise
+        finally:
+            end_time = datetime.now()
+            log_data["endTime"] = end_time
+            log_data["durationMs"] = int((end_time - start_time).total_seconds() * 1000)
+            self.agent_log_service.save_log_async(log_data)
 
-        state.full_content = "\n".join(result_lines)
+    @staticmethod
+    def _safe_json_dumps(value: Optional[dict]) -> Optional[str]:
+        if value is None:
+            return None
+        try:
+            return json.dumps(value, ensure_ascii=False)
+        except Exception:
+            return None
 
     # ─── 内部工具 ─────────────────────────────────────────────────────────────
 
