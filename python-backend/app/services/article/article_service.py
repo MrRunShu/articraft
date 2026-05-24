@@ -203,7 +203,7 @@ class ArticleService:
             current_outline=current_outline,
             modify_suggestion=modify_suggestion,
             task_id=task_id,
-            language=article.get("language", "zh"),   # 新增
+            language=article["language"] or "zh",   # 新增
         )
         await self.db.execute(
             update(Article).where(Article.task_id == task_id).values(

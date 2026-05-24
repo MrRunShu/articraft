@@ -82,7 +82,7 @@ class ArticleAsyncService:
             state = ArticleState()
             state.task_id = task_id
             state.style = article["style"] or "POPULAR"
-            state.language = article.get("language", "zh")   # 新增
+            state.language = article["language"] or "zh"   # 新增
             state.user_description = article["userDescription"]
             state.title = TitleResult(
                 mainTitle=article["mainTitle"],
@@ -136,7 +136,7 @@ class ArticleAsyncService:
             state = ArticleState()
             state.task_id = task_id
             state.style = article["style"] or "POPULAR"
-            state.language = article.get("language", "zh")   # 新增
+            state.language = article["language"] or "zh"   # 新增
             state.enabled_image_methods = enabled_methods
             state.title = TitleResult(
                 mainTitle=article["mainTitle"],
