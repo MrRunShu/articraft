@@ -7,3 +7,7 @@ class ArticleConstant:
     PEXELS_ORIENTATION_LANDSCAPE = "landscape"
 
     PICSUM_URL_TEMPLATE = "https://picsum.photos/800/600?random={}"
+
+    # Day 8：并行配图默认配置
+    AGENT_IMAGE_MAX_CONCURRENCY = 3
+    AGENT_IMAGE_FAIL_FAST = True

@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     stripe_success_url: str = "http://localhost:5173/vip?payment=success"
     stripe_cancel_url: str = "http://localhost:5173/vip?payment=cancel"
 
+    # Day 8：多智能体并行编排配置
+    agent_image_max_concurrency: int = 3
+    agent_image_fail_fast: bool = True
+
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE),
         env_file_encoding="utf-8",

@@ -151,6 +151,9 @@ class PromptConstant:
 }
 """
 
+    # Day 8：并行配图执行说明（用于日志与编排标识）
+    AGENT5_IMAGE_EXECUTION_PROMPT = "并行执行配图生成，确保结果按 position 顺序回填。"
+
     # 文章风格指令映射
     STYLE_INSTRUCTIONS = {
         "POPULAR": "\n写作风格：爆款新媒体风格，语言接地气，善用排比和金句，情绪化表达，引发共鸣。",
