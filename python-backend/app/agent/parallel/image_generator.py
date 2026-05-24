@@ -15,7 +15,7 @@ class ParallelImageGenerator:
     """
     并行配图生成器。
     用 asyncio.Semaphore 控制最大并发数，asyncio.gather 同时提交所有任务。
-    返回 (ImageRequirement, ImageData, cos_url) 三元组列表，顺序与输入一致（调用方负责排序）。
+    返回 (ImageRequirement, ImageData, cos_url) 三元组列表，顺序与输入一致（asyncio.gather 保留提交顺序）。
     """
 
     def __init__(
@@ -53,21 +53,30 @@ class ParallelImageGenerator:
                 except ValueError:
                     method_enum = ImageMethodEnum.PEXELS
 
-                image_request = ImageRequest(
-                    keywords=requirement.keywords,
-                    position=requirement.position,
-                    image_method=method_enum,
-                    section_title=requirement.section_title,
-                    description=f"{requirement.type} image for {requirement.section_title or 'cover'}",
-                )
-                image_data = await self.image_strategy.get_image(image_request)
-                cos_url = await self.cos_service.upload_async(image_data.url)
-                logger.info(
-                    "ParallelImageGenerator: 配图生成成功, position=%s, method=%s",
-                    requirement.position,
-                    image_data.method.value,
-                )
-                return requirement, image_data, cos_url
+                try:
+                    image_request = ImageRequest(
+                        keywords=requirement.keywords,
+                        position=requirement.position,
+                        image_method=method_enum,
+                        section_title=requirement.section_title,
+                        description=f"{requirement.type} image for {requirement.section_title or 'cover'}",
+                    )
+                    image_data = await self.image_strategy.get_image(image_request)
+                    cos_url = await self.cos_service.upload_async(image_data.url)
+                    logger.info(
+                        "ParallelImageGenerator: 配图生成成功, position=%s, method=%s",
+                        requirement.position,
+                        image_data.method.value,
+                    )
+                    return requirement, image_data, cos_url
+                except Exception as exc:
+                    logger.error(
+                        "ParallelImageGenerator: 单张配图生成失败, position=%s, sectionTitle=%s, error=%s",
+                        requirement.position,
+                        requirement.section_title,
+                        exc,
+                    )
+                    raise
 
         raw_results = await asyncio.gather(
             *[_generate_single(req) for req in requirements],
@@ -77,14 +86,13 @@ class ParallelImageGenerator:
         generated: List[Tuple[ImageRequirement, ImageData, str]] = []
         first_error: Exception | None = None
         for item in raw_results:
-            if isinstance(item, Exception):
-                logger.error("ParallelImageGenerator: 单张配图生成失败, error=%s", item)
+            if isinstance(item, BaseException):
                 if first_error is None:
                     first_error = item
                 continue
             generated.append(item)
 
-        if first_error and (self.fail_fast or not generated):
+        if first_error and self.fail_fast:
             raise first_error
 
         return generated
