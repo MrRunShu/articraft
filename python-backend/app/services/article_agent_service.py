@@ -19,6 +19,8 @@ from app.schemas.article import (
     TitleOption,
     TitleResult,
 )
+from app.agent.orchestrator import ArticleAgentOrchestrator
+from app.agent.parallel.image_generator import ParallelImageGenerator
 from app.services.cos_service import CosService
 from app.services.image_search_service import ImageRequest
 from app.services.image_strategy_service import ImageServiceStrategy
@@ -33,11 +35,18 @@ class ArticleAgentService:
             base_url="https://api.deepseek.com",
         )
         self.model = settings.deepseek_model
-        self.image_strategy = ImageServiceStrategy()
+        self.image_service_strategy = ImageServiceStrategy()
         self.cos_service = CosService()
         # 延迟导入避免循环依赖
         from app.services.agent_log_service import AgentLogService
         self.agent_log_service = AgentLogService(database)
+        self.parallel_image_generator = ParallelImageGenerator(
+            image_strategy=self.image_service_strategy,
+            cos_service=self.cos_service,
+            max_concurrency=settings.agent_image_max_concurrency,
+            fail_fast=settings.agent_image_fail_fast,
+        )
+        self.orchestrator = ArticleAgentOrchestrator()
 
     # ─── 三阶段入口 ───────────────────────────────────────────────────────────
 
@@ -46,16 +55,9 @@ class ArticleAgentService:
         state: ArticleState,
         stream_handler: Callable[[str], None],
     ):
-        """阶段1：生成标题方案（3-5个）"""
+        """阶段1：生成标题方案（委托给编排器）"""
         try:
-            logger.info("阶段1：开始生成标题方案, taskId=%s", state.task_id)
-            await self.agent1_generate_title_options(state)
-            stream_handler(SseMessageTypeEnum.AGENT1_COMPLETE.value)
-            logger.info(
-                "阶段1：标题方案生成成功, taskId=%s, count=%s",
-                state.task_id,
-                len(state.title_options or []),
-            )
+            await self.orchestrator.execute_phase1(self, state, stream_handler)
         except Exception as e:
             logger.error("阶段1失败, taskId=%s, error=%s", state.task_id, e)
             raise RuntimeError(f"标题方案生成失败: {e}")
@@ -65,12 +67,9 @@ class ArticleAgentService:
         state: ArticleState,
         stream_handler: Callable[[str], None],
     ):
-        """阶段2：生成大纲（流式输出）"""
+        """阶段2：生成大纲（委托给编排器）"""
         try:
-            logger.info("阶段2：开始生成大纲, taskId=%s", state.task_id)
-            await self.agent2_generate_outline(state, stream_handler)
-            stream_handler(SseMessageTypeEnum.AGENT2_COMPLETE.value)
-            logger.info("阶段2：大纲生成成功, taskId=%s", state.task_id)
+            await self.orchestrator.execute_phase2(self, state, stream_handler)
         except Exception as e:
             logger.error("阶段2失败, taskId=%s, error=%s", state.task_id, e)
             raise RuntimeError(f"大纲生成失败: {e}")
@@ -80,23 +79,9 @@ class ArticleAgentService:
         state: ArticleState,
         stream_handler: Callable[[str], None],
     ):
-        """阶段3：生成正文、配图和合并内容"""
+        """阶段3：正文、配图、合并（委托给编排器）"""
         try:
-            logger.info("阶段3：开始生成正文, taskId=%s", state.task_id)
-            await self.agent3_generate_content(state, stream_handler)
-            stream_handler(SseMessageTypeEnum.AGENT3_COMPLETE.value)
-
-            logger.info("阶段3：开始分析配图需求, taskId=%s", state.task_id)
-            await self.agent4_analyze_image_requirements(state)
-            stream_handler(SseMessageTypeEnum.AGENT4_COMPLETE.value)
-
-            logger.info("阶段3：开始生成配图, taskId=%s", state.task_id)
-            await self.agent5_generate_images(state, stream_handler)
-            stream_handler(SseMessageTypeEnum.AGENT5_COMPLETE.value)
-
-            logger.info("阶段3：开始图文合成, taskId=%s", state.task_id)
-            self.merge_images_into_content(state)
-            stream_handler(SseMessageTypeEnum.MERGE_COMPLETE.value)
+            await self.orchestrator.execute_phase3(self, state, stream_handler)
         except Exception as e:
             logger.error("阶段3失败, taskId=%s, error=%s", state.task_id, e)
             raise RuntimeError(f"正文生成失败: {e}")
@@ -230,44 +215,47 @@ class ArticleAgentService:
     async def agent5_generate_images(
         self, state: ArticleState, stream_handler: Callable[[str], None]
     ):
-        """智能体5：通过策略选择器获取配图"""
+        """智能体5：并行生成配图（Day 8：使用 ParallelImageGenerator）"""
         async with self._agent_log_context(
             task_id=state.task_id,
             agent_name="agent5_generate_images",
+            prompt=PromptConstant.AGENT5_IMAGE_EXECUTION_PROMPT,
             input_data={"requirementsCount": len(state.image_requirements or [])},
         ) as log_data:
+            generated_triples = await self.parallel_image_generator.generate(
+                state.image_requirements or []
+            )
             image_results: List[ImageResult] = []
-            for req in state.image_requirements:
-                try:
-                    method_enum = ImageMethodEnum(req.image_method)
-                except ValueError:
-                    method_enum = ImageMethodEnum.PEXELS
 
-                image_request = ImageRequest(
-                    keywords=req.keywords,
-                    position=req.position,
-                    image_method=method_enum,
-                    section_title=req.section_title,
-                    description=f"{req.type} image for {req.section_title or 'cover'}",
-                )
-                image_data = await self.image_strategy.get_image(image_request)
-                final_url = await self.cos_service.upload_async(image_data.url)
-
+            for requirement, image_data, cos_url in generated_triples:
                 result = ImageResult(
-                    position=req.position,
-                    url=final_url,
+                    position=requirement.position,
+                    url=cos_url,
                     method=image_data.method.value,
-                    keywords=req.keywords,
-                    sectionTitle=req.section_title,
-                    description=image_request.description,
+                    keywords=requirement.keywords,
+                    sectionTitle=requirement.section_title,
+                    description=f"{requirement.type} image for {requirement.section_title or 'cover'}",
                 )
                 image_results.append(result)
 
-                msg = SseMessageTypeEnum.IMAGE_COMPLETE.get_streaming_prefix() + result.model_dump_json(by_alias=True)
+                msg = (
+                    SseMessageTypeEnum.IMAGE_COMPLETE.get_streaming_prefix()
+                    + result.model_dump_json(by_alias=True)
+                )
                 stream_handler(msg)
+                logger.info(
+                    "智能体5：配图生成并上传成功, position=%s, method=%s, cosUrl=%s",
+                    requirement.position,
+                    image_data.method.value,
+                    cos_url,
+                )
 
-            state.images = image_results
-            log_data["outputData"] = self._safe_json_dumps({"imagesCount": len(state.images)})
+            # 并行执行后按位置排序，确保顺序稳定
+            state.images = sorted(image_results, key=lambda r: r.position)
+            log_data["outputData"] = self._safe_json_dumps(
+                {"imagesCount": len(state.images)}
+            )
+            logger.info("智能体5：所有配图生成完成, count=%s", len(state.images))
 
     async def ai_modify_outline(
         self,
