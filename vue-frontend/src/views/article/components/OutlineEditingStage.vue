@@ -1,8 +1,8 @@
 <template>
   <div class="outline-editing-stage">
     <div class="stage-header">
-      <h2 class="stage-title">编辑文章大纲</h2>
-      <p class="stage-subtitle">可编辑章节内容、拖拽排序、添加/删除章节，或让 AI 辅助修改</p>
+      <h2 class="stage-title">{{ t('article.outlineEdit.title') }}</h2>
+      <p class="stage-subtitle">{{ t('article.outlineEdit.subtitle') }}</p>
     </div>
 
     <div class="outline-list" ref="outlineListRef">
@@ -16,7 +16,7 @@
           <span class="section-number">{{ index + 1 }}</span>
           <a-input
             v-model:value="section.title"
-            placeholder="章节标题"
+            :placeholder="t('article.outlineEdit.sectionTitle')"
             class="section-title-input"
           />
           <a-button type="text" danger size="small" @click="deleteSection(index)">✕</a-button>
@@ -27,7 +27,7 @@
             <span class="point-bullet">•</span>
             <a-input
               v-model:value="section.points[pointIdx]"
-              placeholder="要点内容"
+              :placeholder="t('article.outlineEdit.pointContent')"
               class="point-input"
             />
             <a-button
@@ -38,18 +38,18 @@
             >×</a-button>
           </div>
           <a-button type="dashed" size="small" @click="addPoint(index)" class="add-point-btn">
-            + 添加要点
+            {{ t('article.outlineEdit.addPoint') }}
           </a-button>
         </div>
       </div>
     </div>
 
     <div class="ai-chat-section">
-      <div class="chat-header">🤖 AI 助手修改大纲</div>
+      <div class="chat-header">{{ t('article.outlineEdit.aiAssistant') }}</div>
       <div class="chat-input-wrapper">
         <a-textarea
           v-model:value="modifySuggestion"
-          placeholder="告诉 AI 如何修改大纲，例如：请在第二章节后增加一个关于实践案例的章节"
+          :placeholder="t('article.outlineEdit.aiPlaceholder')"
           :rows="2"
           :maxlength="500"
           show-count
@@ -61,14 +61,14 @@
           @click="handleAiModify"
           class="ai-modify-btn"
         >
-          AI 修改
+          {{ t('article.outlineEdit.aiModifyBtn') }}
         </a-button>
       </div>
     </div>
 
     <div class="actions">
       <a-button size="large" @click="addSection" class="add-section-btn">
-        + 添加章节
+        {{ t('article.outlineEdit.addSection') }}
       </a-button>
       <a-button
         type="primary"
@@ -78,7 +78,7 @@
         @click="handleConfirm"
         class="confirm-btn"
       >
-        确认并生成正文
+        {{ t('article.outlineEdit.confirmBtn') }}
       </a-button>
     </div>
   </div>
@@ -87,6 +87,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
+import { useI18n } from 'vue-i18n'
 import Sortable from 'sortablejs'
 import { aiModifyOutline } from '@/api/article'
 
@@ -103,6 +104,8 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { loading: false })
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   (e: 'confirm', outline: OutlineSection[]): void
@@ -187,10 +190,10 @@ async function handleAiModify() {
         points: item.points?.length ? [...item.points] : [''],
       }))
       modifySuggestion.value = ''
-      message.success('AI 已根据您的建议修改大纲')
+      message.success(t('article.outlineEdit.aiSuccess'))
     }
   } catch (err: any) {
-    message.error(err?.message || 'AI 修改失败')
+    message.error(err?.message || t('article.outlineEdit.aiFailed'))
   } finally {
     aiModifying.value = false
   }

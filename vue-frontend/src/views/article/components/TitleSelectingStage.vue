@@ -1,8 +1,8 @@
 <template>
   <div class="title-selecting-stage">
     <div class="stage-header">
-      <h2 class="stage-title">选择标题方案</h2>
-      <p class="stage-subtitle">AI 为您生成了以下标题，请选择一个或自定义</p>
+      <h2 class="stage-title">{{ t('article.titleSelect.title') }}</h2>
+      <p class="stage-subtitle">{{ t('article.titleSelect.subtitle') }}</p>
     </div>
 
     <a-radio-group v-model:value="selectedIndex" class="title-options">
@@ -17,18 +17,18 @@
       <div class="title-option custom">
         <a-radio :value="-1">
           <div class="title-content">
-            <div class="title-main">自定义标题</div>
+            <div class="title-main">{{ t('article.titleSelect.custom') }}</div>
           </div>
         </a-radio>
         <div v-if="selectedIndex === -1" class="custom-inputs">
           <a-input
             v-model:value="customMainTitle"
-            placeholder="输入主标题"
+            :placeholder="t('article.titleSelect.customMainTitle')"
             class="custom-input"
           />
           <a-input
             v-model:value="customSubTitle"
-            placeholder="输入副标题"
+            :placeholder="t('article.titleSelect.customSubTitle')"
             class="custom-input"
           />
         </div>
@@ -36,11 +36,11 @@
     </a-radio-group>
 
     <div class="description-section">
-      <label class="section-label">补充描述（可选）</label>
-      <p class="section-tip">补充您对文章的期望、重点强调的内容等，AI 会在生成大纲时参考</p>
+      <label class="section-label">{{ t('article.titleSelect.descLabel') }}</label>
+      <p class="section-tip">{{ t('article.titleSelect.descTip') }}</p>
       <a-textarea
         v-model:value="userDescription"
-        placeholder="例如：请重点强调技术原理，用通俗的语言讲解..."
+        :placeholder="t('article.titleSelect.descPlaceholder')"
         :rows="3"
         :maxlength="500"
         show-count
@@ -57,7 +57,7 @@
         @click="handleConfirm"
         class="confirm-btn"
       >
-        确认并生成大纲
+        {{ t('article.titleSelect.confirmBtn') }}
       </a-button>
     </div>
   </div>
@@ -65,6 +65,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 interface TitleOption {
   mainTitle: string
@@ -79,6 +80,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
 })
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   (e: 'confirm', data: { mainTitle: string; subTitle: string; userDescription: string }): void

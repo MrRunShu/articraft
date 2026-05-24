@@ -6,18 +6,18 @@
       <a-row :gutter="16" style="height:100%">
         <!-- 左栏：输入设置（仅在输入阶段显示完整表单） -->
         <a-col :span="6" class="panel">
-          <a-card title="创作设置" :bordered="false">
+          <a-card :title="t('article.create.settings')" :bordered="false">
             <a-form layout="vertical">
-              <a-form-item label="文章选题">
+              <a-form-item :label="t('article.create.topicLabel')">
                 <a-textarea
                   v-model:value="topic"
-                  placeholder="请输入文章选题，例如：年轻人如何在大城市低成本生活"
+                  :placeholder="t('article.create.topicPlaceholder')"
                   :rows="4"
                   :disabled="currentPhase !== 'INPUT'"
                 />
               </a-form-item>
 
-              <a-form-item label="文章风格">
+              <a-form-item :label="t('article.create.styleLabel')">
                 <div class="style-grid">
                   <div
                     v-for="s in ARTICLE_STYLES"
@@ -26,12 +26,12 @@
                     @click="currentPhase === 'INPUT' && (selectedStyle = s.value)"
                   >
                     <span class="style-icon">{{ s.icon }}</span>
-                    <span class="style-label">{{ s.label }}</span>
+                    <span class="style-label">{{ t('article.create.styles.' + s.value) }}</span>
                   </div>
                 </div>
               </a-form-item>
 
-              <a-form-item label="配图方式">
+              <a-form-item :label="t('article.create.imageMethodsLabel')">
                 <div class="image-methods">
                   <div
                     v-for="m in IMAGE_METHODS"
@@ -40,7 +40,7 @@
                     @click="toggleImageMethod(m)"
                   >
                     <span class="method-icon">{{ m.icon }}</span>
-                    <span class="method-name">{{ m.label }}</span>
+                    <span class="method-name">{{ t('article.create.imageMethodLabels.' + m.value) }}</span>
                     <a-tag v-if="m.vipOnly && !userStore.isVip" color="gold" class="vip-tag">VIP</a-tag>
                   </div>
                 </div>
@@ -53,8 +53,8 @@
                 class="quota-alert"
               >
                 <template #message>
-                  免费用户最多创作 5 篇文章
-                  <a-button type="link" size="small" @click="router.push('/vip')">升级 VIP →</a-button>
+                  {{ t('article.create.quotaAlert') }}
+                  <a-button type="link" size="small" @click="router.push('/vip')">{{ t('article.create.upgradeVip') }}</a-button>
                 </template>
               </a-alert>
 
@@ -66,18 +66,18 @@
                   :disabled="!topic.trim() || isCreating"
                   @click="onGenerate"
                 >
-                  {{ isCreating ? '生成中...' : '开始创作' }}
+                  {{ isCreating ? t('article.create.generating') : t('article.create.startBtn') }}
                 </a-button>
               </a-form-item>
 
               <a-form-item v-if="currentPhase !== 'INPUT'">
-                <a-button block @click="resetCreate">重新创作</a-button>
+                <a-button block @click="resetCreate">{{ t('article.create.restartBtn') }}</a-button>
               </a-form-item>
             </a-form>
 
             <a-divider v-if="taskId" />
             <div v-if="taskId" class="task-info">
-              <div class="task-id">任务 ID：{{ taskId.slice(0, 8) }}...</div>
+              <div class="task-id">{{ t('article.create.taskId') }}：{{ taskId.slice(0, 8) }}...</div>
               <a-tag :color="statusColor">{{ statusText }}</a-tag>
             </div>
 
@@ -90,7 +90,7 @@
                 :class="['phase-step', { active: currentPhase === step.key, done: isPhoneDone(step.key) }]"
               >
                 <span class="phase-dot">{{ isPhoneDone(step.key) ? '✅' : currentPhase === step.key ? '⏳' : '○' }}</span>
-                <span class="phase-name">{{ step.label }}</span>
+                <span class="phase-name">{{ t('article.create.phases.' + step.key) }}</span>
               </div>
             </div>
           </a-card>
@@ -98,17 +98,17 @@
 
         <!-- 中栏：进度日志 -->
         <a-col :span="8" class="panel">
-          <a-card title="生成进度" :bordered="false" class="log-card">
+          <a-card :title="t('article.create.progress')" :bordered="false" class="log-card">
             <div ref="logContainer" class="log-container">
               <div v-for="(log, i) in logs" :key="i" class="log-item">
                 <span class="log-icon">{{ log.icon }}</span>
                 <span class="log-text">{{ log.text }}</span>
                 <a-tag v-if="log.method" size="small" color="blue" class="method-tag">
-                  {{ IMAGE_METHOD_LABELS[log.method] ?? log.method }}
+                  {{ t('article.create.imageMethodLabels.' + log.method, log.method) }}
                 </a-tag>
               </div>
-              <div v-if="isCreating && logs.length === 0" class="log-empty">等待连接...</div>
-              <div v-if="!isCreating && logs.length === 0" class="log-empty">点击「开始创作」启动生成</div>
+              <div v-if="isCreating && logs.length === 0" class="log-empty">{{ t('article.create.waitingConnection') }}</div>
+              <div v-if="!isCreating && logs.length === 0" class="log-empty">{{ t('article.create.noLogs') }}</div>
             </div>
           </a-card>
         </a-col>
@@ -121,14 +121,14 @@
                 <span>{{ rightPanelTitle }}</span>
                 <a-tag v-if="selectedStyle" color="purple">
                   {{ ARTICLE_STYLES.find(s => s.value === selectedStyle)?.icon }}
-                  {{ ARTICLE_STYLES.find(s => s.value === selectedStyle)?.label }}
+                  {{ t('article.create.styles.' + selectedStyle) }}
                 </a-tag>
                 <a-button
                   v-if="taskId && currentPhase === 'COMPLETED'"
                   size="small"
                   @click="router.push(`/article/${taskId}`)"
                 >
-                  查看详情
+                  {{ t('article.create.viewDetail') }}
                 </a-button>
               </a-space>
             </template>
@@ -137,14 +137,14 @@
             <Transition name="fade-slide" mode="out-in">
               <!-- 输入阶段：空状态 -->
               <div v-if="currentPhase === 'INPUT'" key="input" class="empty-state">
-                <a-empty description="文章内容将在这里显示" />
+                <a-empty :description="t('article.create.contentEmpty')" />
               </div>
 
               <!-- 标题生成中 -->
               <div v-else-if="currentPhase === 'TITLE_GENERATING'" key="title-gen" class="loading-stage">
                 <a-spin size="large" />
-                <h3>AI 正在生成标题方案...</h3>
-                <p>稍等片刻，即将为您呈现多个精彩标题</p>
+                <h3>{{ t('article.create.titleGenerating') }}</h3>
+                <p>{{ t('article.create.titleGeneratingDesc') }}</p>
               </div>
 
               <!-- 标题选择阶段 -->
@@ -165,7 +165,7 @@
                 <div class="outline-preview">
                   <div class="outline-generating-label">
                     <a-spin size="small" />
-                    <span>AI 正在规划文章大纲...</span>
+                    <span>{{ t('article.create.outlineGenerating') }}</span>
                   </div>
                   <div v-if="parsedOutline.length > 0" class="outline-list">
                     <div v-for="item in parsedOutline" :key="item.section" class="outline-item">
@@ -195,7 +195,7 @@
                   <p class="article-subtitle">{{ article.subTitle }}</p>
                 </div>
                 <div v-if="streamingContent" class="preview-content markdown-body" v-html="previewHtml" />
-                <div v-else class="log-empty">正在生成正文...</div>
+                <div v-else class="log-empty">{{ t('article.create.contentGenerating') }}</div>
               </div>
 
               <!-- 完成阶段 -->
@@ -218,13 +218,13 @@
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
+import { useI18n } from 'vue-i18n'
 import {
   createArticle,
   confirmTitle,
   confirmOutline,
   getArticleDetail,
   ARTICLE_STYLES,
-  IMAGE_METHOD_LABELS,
   type TitleOption,
   type OutlineSection,
 } from '@/api/article'
@@ -235,12 +235,14 @@ import AppHeader from '@/components/AppHeader.vue'
 import TitleSelectingStage from './components/TitleSelectingStage.vue'
 import OutlineEditingStage from './components/OutlineEditingStage.vue'
 
+const { t } = useI18n()
+
 const IMAGE_METHODS = [
-  { value: 'PEXELS', label: 'Pexels 图库', icon: '📷', vipOnly: false },
-  { value: 'NANO_BANANA', label: 'AI 生图', icon: '🎨', vipOnly: true },
-  { value: 'MERMAID', label: 'Mermaid 图', icon: '📊', vipOnly: false },
-  { value: 'ICONIFY', label: '图标', icon: '🔷', vipOnly: false },
-  { value: 'EMOJI_PACK', label: '表情包', icon: '😄', vipOnly: false },
+  { value: 'PEXELS', icon: '📷', vipOnly: false },
+  { value: 'NANO_BANANA', icon: '🎨', vipOnly: true },
+  { value: 'MERMAID', icon: '📊', vipOnly: false },
+  { value: 'ICONIFY', icon: '🔷', vipOnly: false },
+  { value: 'EMOJI_PACK', icon: '😄', vipOnly: false },
 ]
 
 type Phase =
@@ -253,12 +255,12 @@ type Phase =
   | 'COMPLETED'
 
 const PHASE_STEPS = [
-  { key: 'TITLE_GENERATING', label: '生成标题方案' },
-  { key: 'TITLE_SELECTING', label: '选择标题' },
-  { key: 'OUTLINE_GENERATING', label: '生成大纲' },
-  { key: 'OUTLINE_EDITING', label: '编辑大纲' },
-  { key: 'CONTENT_GENERATING', label: '生成正文' },
-  { key: 'COMPLETED', label: '创作完成' },
+  { key: 'TITLE_GENERATING' },
+  { key: 'TITLE_SELECTING' },
+  { key: 'OUTLINE_GENERATING' },
+  { key: 'OUTLINE_EDITING' },
+  { key: 'CONTENT_GENERATING' },
+  { key: 'COMPLETED' },
 ] as const
 
 const PHASE_ORDER = PHASE_STEPS.map(s => s.key)
@@ -304,18 +306,7 @@ const parsedOutline = computed<OutlineSection[]>(() => {
   }
 })
 
-const rightPanelTitle = computed(() => {
-  const map: Record<Phase, string> = {
-    INPUT: '文章预览',
-    TITLE_GENERATING: '标题生成中',
-    TITLE_SELECTING: '选择标题',
-    OUTLINE_GENERATING: '大纲生成中',
-    OUTLINE_EDITING: '编辑大纲',
-    CONTENT_GENERATING: '正文生成中',
-    COMPLETED: '文章预览',
-  }
-  return map[currentPhase.value] ?? '文章预览'
-})
+const rightPanelTitle = computed(() => t(`article.create.phaseTitle.${currentPhase.value}`))
 
 const statusColor = computed(() => {
   const map: Record<string, string> = {
@@ -327,15 +318,7 @@ const statusColor = computed(() => {
   return map[status.value] ?? 'default'
 })
 
-const statusText = computed(() => {
-  const map: Record<string, string> = {
-    PENDING: '排队中',
-    PROCESSING: '生成中',
-    COMPLETED: '已完成',
-    FAILED: '失败',
-  }
-  return map[status.value] ?? status.value
-})
+const statusText = computed(() => t(`article.list.status.${status.value}`, status.value))
 
 function isPhoneDone(key: string): boolean {
   const currentIdx = PHASE_ORDER.indexOf(currentPhase.value as any)
@@ -354,7 +337,7 @@ function addLog(icon: string, text: string, method?: string) {
 
 function toggleImageMethod(m: { value: string; vipOnly: boolean }) {
   if (m.vipOnly && !userStore.isVip) {
-    message.warning('该配图方式为 VIP 专属，请先升级')
+    message.warning(t('article.create.vipOnly'))
     router.push('/vip')
     return
   }
