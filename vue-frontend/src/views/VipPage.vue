@@ -8,19 +8,19 @@
         <a-result
           v-if="userStore.isVip"
           status="success"
-          title="您已是 VIP 会员"
+          :title="t('vip.alreadyVip')"
           :sub-title="vipSince"
         >
           <template #extra>
-            <a-button type="primary" @click="router.push('/')">开始创作</a-button>
+            <a-button type="primary" @click="router.push('/')">{{ t('vip.startCreate') }}</a-button>
           </template>
         </a-result>
 
         <!-- VIP 介绍 + 购买区 -->
         <template v-else>
           <div class="vip-hero">
-            <h1 class="vip-title">升级 VIP 会员</h1>
-            <p class="vip-subtitle">解锁全部 AI 创作能力，无限创作精彩内容</p>
+            <h1 class="vip-title">{{ t('vip.title') }}</h1>
+            <p class="vip-subtitle">{{ t('vip.subtitle') }}</p>
           </div>
 
           <!-- 权益对比表 -->
@@ -96,9 +96,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
+import { useI18n } from 'vue-i18n'
 import AppHeader from '@/components/AppHeader.vue'
 import { useUserStore } from '@/stores/user'
 import { createCheckout } from '@/api/payment'
+
+const { t } = useI18n()
 
 const router = useRouter()
 const route = useRoute()

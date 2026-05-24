@@ -1,21 +1,21 @@
 <template>
   <div class="auth-page">
-    <a-card title="注册" class="auth-card">
-      <a-form :model="form" layout="vertical" @finish="onFinish">
-        <a-form-item label="账号" name="userAccount" :rules="[{ required: true, message: '请输入账号' }, { min: 4, message: '账号不能少于4位' }]">
-          <a-input v-model:value="form.userAccount" placeholder="请输入账号" />
+    <a-card :title="t('auth.register')" class="auth-card">
+      <a-form :model="form" :rules="rules" layout="vertical" @finish="onFinish">
+        <a-form-item :label="t('auth.account')" name="userAccount">
+          <a-input v-model:value="form.userAccount" :placeholder="t('auth.accountPlaceholder')" />
         </a-form-item>
-        <a-form-item label="密码" name="userPassword" :rules="[{ required: true, message: '请输入密码' }, { min: 8, message: '密码不能少于8位' }]">
-          <a-input-password v-model:value="form.userPassword" placeholder="请输入密码" />
+        <a-form-item :label="t('auth.password')" name="userPassword">
+          <a-input-password v-model:value="form.userPassword" :placeholder="t('auth.passwordPlaceholder')" />
         </a-form-item>
-        <a-form-item label="确认密码" name="checkPassword" :rules="[{ required: true, message: '请确认密码' }, { validator: checkConfirm }]">
-          <a-input-password v-model:value="form.checkPassword" placeholder="请再次输入密码" />
+        <a-form-item :label="t('auth.confirmPassword')" name="checkPassword">
+          <a-input-password v-model:value="form.checkPassword" :placeholder="t('auth.confirmPasswordPlaceholder')" />
         </a-form-item>
         <a-form-item>
-          <a-button type="primary" html-type="submit" :loading="loading" block>注册</a-button>
+          <a-button type="primary" html-type="submit" :loading="loading" block>{{ t('auth.registerBtn') }}</a-button>
         </a-form-item>
         <div class="auth-link">
-          已有账号？<router-link to="/login">立即登录</router-link>
+          {{ t('auth.hasAccount') }}<router-link to="/login">{{ t('auth.loginBtn') }}</router-link>
         </div>
       </a-form>
     </a-card>
@@ -23,18 +23,35 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
+import { useI18n } from 'vue-i18n'
 import { userRegister } from '@/api/user'
 
+const { t } = useI18n()
 const router = useRouter()
 const loading = ref(false)
 const form = reactive({ userAccount: '', userPassword: '', checkPassword: '' })
 
+const rules = computed(() => ({
+  userAccount: [
+    { required: true, message: t('auth.accountRequired') },
+    { min: 4, message: t('auth.accountMinLength') }
+  ],
+  userPassword: [
+    { required: true, message: t('auth.passwordRequired') },
+    { min: 8, message: t('auth.passwordMinLength') }
+  ],
+  checkPassword: [
+    { required: true, message: t('auth.confirmPasswordRequired') },
+    { validator: checkConfirm }
+  ]
+}))
+
 function checkConfirm(_: unknown, value: string) {
   if (value && value !== form.userPassword) {
-    return Promise.reject('两次密码不一致')
+    return Promise.reject(t('auth.passwordMismatch'))
   }
   return Promise.resolve()
 }
@@ -43,7 +60,7 @@ async function onFinish() {
   loading.value = true
   try {
     await userRegister(form)
-    message.success('注册成功，请登录')
+    message.success(t('auth.registerSuccess'))
     router.push('/login')
   } finally {
     loading.value = false

@@ -24,6 +24,11 @@ export default {
     accountMinLength: 'Account must be at least 4 characters',
     passwordRequired: 'Please enter your password',
     passwordMinLength: 'Password must be at least 8 characters',
+    confirmPassword: 'Confirm Password',
+    confirmPasswordPlaceholder: 'Enter password again',
+    confirmPasswordRequired: 'Please confirm your password',
+    passwordMismatch: 'Passwords do not match',
+    registerSuccess: 'Registered successfully, please login',
   },
   home: {
     title: 'AI Article Creator',
@@ -108,6 +113,7 @@ export default {
       confirmBtn: 'Confirm & Generate Content',
       aiSuccess: 'AI has modified the outline based on your feedback',
       aiFailed: 'AI modification failed',
+      dragHandle: 'Drag to reorder',
     },
     list: {
       title: 'My Articles',

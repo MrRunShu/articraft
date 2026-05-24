@@ -10,7 +10,7 @@
 
     <a-layout-content class="main">
       <div class="page-header">
-        <h1 class="page-title">数据分析</h1>
+        <h1 class="page-title">{{ t('stats.title') }}</h1>
         <a-button @click="loadData" :loading="loading">刷新数据</a-button>
       </div>
 
@@ -90,9 +90,11 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
+import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
 import { getStatisticsOverview, type StatisticsVO } from '@/api/statistics'
 
+const { t } = useI18n()
 const router = useRouter()
 const loading = ref(false)
 const stats = ref<StatisticsVO | null>(null)

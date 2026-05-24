@@ -24,6 +24,11 @@ export default {
     accountMinLength: '账号不能少于4位',
     passwordRequired: '请输入密码',
     passwordMinLength: '密码不能少于8位',
+    confirmPassword: '确认密码',
+    confirmPasswordPlaceholder: '请再次输入密码',
+    confirmPasswordRequired: '请确认密码',
+    passwordMismatch: '两次密码不一致',
+    registerSuccess: '注册成功，请登录',
   },
   home: {
     title: 'AI 爆款文章创作器',
@@ -108,6 +113,7 @@ export default {
       confirmBtn: '确认并生成正文',
       aiSuccess: 'AI 已根据您的建议修改大纲',
       aiFailed: 'AI 修改失败',
+      dragHandle: '拖动排序',
     },
     list: {
       title: '我的文章',

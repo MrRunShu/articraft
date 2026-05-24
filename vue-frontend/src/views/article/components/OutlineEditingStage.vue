@@ -12,7 +12,7 @@
         class="outline-section"
       >
         <div class="section-header">
-          <span class="drag-handle" title="拖动排序">⋮⋮</span>
+          <span class="drag-handle" :title="t('article.outlineEdit.dragHandle')">⋮⋮</span>
           <span class="section-number">{{ index + 1 }}</span>
           <a-input
             v-model:value="section.title"

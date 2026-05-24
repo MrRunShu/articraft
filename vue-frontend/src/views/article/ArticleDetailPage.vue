@@ -3,8 +3,8 @@
     <a-layout-header class="header">
       <span class="logo">AI 爆款文章创作器</span>
       <a-space>
-        <a-button type="link" style="color:#fff" @click="router.push('/article/list')">我的文章</a-button>
-        <a-button type="link" style="color:#fff" @click="router.push('/')">创作新文章</a-button>
+        <a-button type="link" style="color:#fff" @click="router.push('/article/list')">{{ t('article.list.title') }}</a-button>
+        <a-button type="link" style="color:#fff" @click="router.push('/')">{{ t('article.list.newBtn') }}</a-button>
       </a-space>
     </a-layout-header>
 
@@ -16,20 +16,20 @@
             <a-col :span="6">
               <a-card :bordered="false">
                 <a-descriptions layout="vertical" :column="1" size="small">
-                  <a-descriptions-item label="状态">
+                  <a-descriptions-item :label="t('article.detail.status')">
                     <a-tag :color="statusColor">{{ statusText }}</a-tag>
                   </a-descriptions-item>
-                  <a-descriptions-item label="选题">{{ article.topic }}</a-descriptions-item>
-                  <a-descriptions-item v-if="article.mainTitle" label="主标题">
+                  <a-descriptions-item :label="t('article.detail.topic')">{{ article.topic }}</a-descriptions-item>
+                  <a-descriptions-item v-if="article.mainTitle" :label="t('article.detail.mainTitle')">
                     {{ article.mainTitle }}
                   </a-descriptions-item>
-                  <a-descriptions-item v-if="article.subTitle" label="副标题">
+                  <a-descriptions-item v-if="article.subTitle" :label="t('article.detail.subTitle')">
                     {{ article.subTitle }}
                   </a-descriptions-item>
-                  <a-descriptions-item label="创建时间">
+                  <a-descriptions-item :label="t('article.detail.createTime')">
                     {{ article.createTime?.slice(0, 16).replace('T', ' ') }}
                   </a-descriptions-item>
-                  <a-descriptions-item v-if="article.completedTime" label="完成时间">
+                  <a-descriptions-item v-if="article.completedTime" :label="t('article.detail.completedTime')">
                     {{ article.completedTime?.slice(0, 16).replace('T', ' ') }}
                   </a-descriptions-item>
                 </a-descriptions>
@@ -38,15 +38,15 @@
 
                 <a-space direction="vertical" style="width:100%">
                   <a-button block @click="onExport" :disabled="!article.fullContent">
-                    导出 Markdown
+                    {{ t('article.detail.exportMd') }}
                   </a-button>
-                  <a-button block @click="router.back()">返回</a-button>
+                  <a-button block @click="router.back()">{{ t('article.detail.back') }}</a-button>
                 </a-space>
               </a-card>
 
               <!-- 封面图 -->
               <a-card v-if="article.coverImage" :bordered="false" style="margin-top:16px">
-                <template #title>封面图</template>
+                <template #title>{{ t('article.detail.coverImg') }}</template>
                 <img :src="article.coverImage" alt="封面" style="width:100%;border-radius:4px" />
               </a-card>
             </a-col>
@@ -128,10 +128,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
+import { useI18n } from 'vue-i18n'
 import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons-vue'
 import { getArticleDetail, type ArticleVO, getExecutionLogs, type AgentExecutionStatsVO } from '@/api/article'
 import { renderMarkdown } from '@/utils/markdown'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
@@ -156,15 +158,7 @@ const statusColor = computed(() => {
   return map[article.value?.status ?? ''] ?? 'default'
 })
 
-const statusText = computed(() => {
-  const map: Record<string, string> = {
-    PENDING: '排队中',
-    PROCESSING: '生成中',
-    COMPLETED: '已完成',
-    FAILED: '失败',
-  }
-  return map[article.value?.status ?? ''] ?? ''
-})
+const statusText = computed(() => t(`article.list.status.${article.value?.status ?? ''}`, article.value?.status ?? ''))
 
 // ─── 执行日志（Day 7）──────────────────────────────────────────
 const executionStats = ref<AgentExecutionStatsVO | null>(null)

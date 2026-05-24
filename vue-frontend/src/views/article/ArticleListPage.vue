@@ -3,7 +3,7 @@
     <a-layout-header class="header">
       <span class="logo">AI 爆款文章创作器</span>
       <a-space>
-        <a-button type="primary" @click="router.push('/')">创作新文章</a-button>
+        <a-button type="primary" @click="router.push('/')">{{ t('article.list.newBtn') }}</a-button>
         <a-dropdown>
           <a-space style="color:#fff;cursor:pointer">
             <a-avatar>{{ userStore.userInfo?.userName?.charAt(0) ?? 'U' }}</a-avatar>
@@ -11,7 +11,7 @@
           </a-space>
           <template #overlay>
             <a-menu>
-              <a-menu-item @click="onLogout">退出登录</a-menu-item>
+              <a-menu-item @click="onLogout">{{ t('nav.logout') }}</a-menu-item>
             </a-menu>
           </template>
         </a-dropdown>
@@ -19,27 +19,27 @@
     </a-layout-header>
 
     <a-layout-content class="main">
-      <a-card title="我的文章" :bordered="false">
+      <a-card :title="t('article.list.title')" :bordered="false">
         <!-- 搜索栏 -->
         <a-row :gutter="16" style="margin-bottom:16px">
           <a-col :span="8">
             <a-input
               v-model:value="searchTopic"
-              placeholder="搜索选题关键词"
+              :placeholder="t('article.list.searchPlaceholder')"
               allow-clear
               @press-enter="loadList"
             />
           </a-col>
           <a-col :span="4">
-            <a-select v-model:value="searchStatus" placeholder="全部状态" allow-clear style="width:100%">
-              <a-select-option value="PENDING">排队中</a-select-option>
-              <a-select-option value="PROCESSING">生成中</a-select-option>
-              <a-select-option value="COMPLETED">已完成</a-select-option>
-              <a-select-option value="FAILED">失败</a-select-option>
+            <a-select v-model:value="searchStatus" :placeholder="t('article.list.allStatus')" allow-clear style="width:100%">
+              <a-select-option value="PENDING">{{ t('article.list.status.PENDING') }}</a-select-option>
+              <a-select-option value="PROCESSING">{{ t('article.list.status.PROCESSING') }}</a-select-option>
+              <a-select-option value="COMPLETED">{{ t('article.list.status.COMPLETED') }}</a-select-option>
+              <a-select-option value="FAILED">{{ t('article.list.status.FAILED') }}</a-select-option>
             </a-select>
           </a-col>
           <a-col :span="4">
-            <a-button type="primary" @click="loadList">搜索</a-button>
+            <a-button type="primary" @click="loadList">{{ t('article.list.searchBtn') }}</a-button>
           </a-col>
         </a-row>
 
@@ -51,7 +51,7 @@
             current: pagination.current,
             pageSize: pagination.pageSize,
             total: pagination.total,
-            showTotal: (total: number) => `共 ${total} 篇`,
+            showTotal: (total: number) => t('article.list.total', { total }),
             onChange: onPageChange,
           }"
           row-key="taskId"
@@ -68,7 +68,7 @@
             </template>
 
             <template v-if="column.key === 'status'">
-              <a-tag :color="statusColor(record.status)">{{ statusText(record.status) }}</a-tag>
+              <a-tag :color="statusColor(record.status)">{{ t('article.list.status.' + record.status, record.status) }}</a-tag>
             </template>
 
             <template v-if="column.key === 'createTime'">
@@ -101,10 +101,12 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
+import { useI18n } from 'vue-i18n'
 import { listArticle, deleteArticle, type ArticleVO } from '@/api/article'
 import { useUserStore } from '@/stores/user'
 import { userLogout } from '@/api/user'
 
+const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 
@@ -130,16 +132,6 @@ function statusColor(s: string) {
     FAILED: 'error',
   }
   return map[s] ?? 'default'
-}
-
-function statusText(s: string) {
-  const map: Record<string, string> = {
-    PENDING: '排队中',
-    PROCESSING: '生成中',
-    COMPLETED: '已完成',
-    FAILED: '失败',
-  }
-  return map[s] ?? s
 }
 
 async function loadList() {
@@ -177,7 +169,7 @@ async function onDelete(record: ArticleVO) {
 async function onLogout() {
   await userLogout()
   userStore.logout()
-  message.success('已退出登录')
+  message.success(t('auth.logoutSuccess'))
   router.push('/login')
 }
 
