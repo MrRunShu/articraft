@@ -73,12 +73,14 @@ class ArticleState:
         self.images: Optional[List[ImageResult]] = None
         self.cover_image: Optional[str] = None
         self.full_content: Optional[str] = None
+        self.language: str = 'zh'   # 新增
 
 
 class ArticleCreateRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=500)
     style: Optional[str] = Field(default="POPULAR")
     enabled_image_methods: Optional[List[str]] = Field(None, alias="enabledImageMethods")
+    language: str = Field(default='zh')   # 新增：'zh' | 'en'
 
     class Config:
         populate_by_name = True

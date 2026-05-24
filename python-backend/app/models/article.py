@@ -12,6 +12,7 @@ class Article(Base):
     user_id = Column("userId", BigInteger, nullable=False)
     topic = Column(String(500), nullable=False)
     style = Column(String(20), nullable=True, default="POPULAR")
+    language = Column(String(5), nullable=False, default='zh', comment="文章语言：zh | en")  # 新增
     main_title = Column("mainTitle", String(200), nullable=True)
     sub_title = Column("subTitle", String(300), nullable=True)
     outline = Column(Text, nullable=True)
