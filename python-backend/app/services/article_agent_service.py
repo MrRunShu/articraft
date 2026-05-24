@@ -59,7 +59,7 @@ class ArticleAgentService:
             await self.orchestrator.execute_phase1(self, state, stream_handler)
         except Exception as e:
             logger.error("阶段1失败, taskId=%s, error=%s", state.task_id, e)
-            raise RuntimeError(f"标题方案生成失败: {e}")
+            raise RuntimeError(f"标题方案生成失败: {e}") from e
 
     async def execute_phase2_generate_outline(
         self,
@@ -71,7 +71,7 @@ class ArticleAgentService:
             await self.orchestrator.execute_phase2(self, state, stream_handler)
         except Exception as e:
             logger.error("阶段2失败, taskId=%s, error=%s", state.task_id, e)
-            raise RuntimeError(f"大纲生成失败: {e}")
+            raise RuntimeError(f"大纲生成失败: {e}") from e
 
     async def execute_phase3_generate_content(
         self,
@@ -83,7 +83,7 @@ class ArticleAgentService:
             await self.orchestrator.execute_phase3(self, state, stream_handler)
         except Exception as e:
             logger.error("阶段3失败, taskId=%s, error=%s", state.task_id, e)
-            raise RuntimeError(f"正文生成失败: {e}")
+            raise RuntimeError(f"正文生成失败: {e}") from e
 
     # ─── 各智能体实现 ─────────────────────────────────────────────────────────
 
