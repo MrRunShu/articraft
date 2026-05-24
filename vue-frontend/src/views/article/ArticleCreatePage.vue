@@ -367,7 +367,7 @@ async function onGenerate() {
     taskId.value = res.data
     status.value = 'PROCESSING'
     router.replace({ query: { taskId: res.data } })
-    addLog('⏳', '任务创建成功，正在连接进度流...')
+    addLog('⏳', t('article.create.log.taskCreated'))
     startSse(res.data)
   } catch {
     isCreating.value = false
@@ -387,11 +387,11 @@ function startSse(id: string) {
       if (status.value === 'COMPLETED' || status.value === 'FAILED') return
       if (reconnectAttempts < 3) {
         reconnectAttempts++
-        addLog('🔄', `连接断开，2秒后重试 (${reconnectAttempts}/3)...`)
+        addLog('🔄', t('article.create.log.reconnecting', { n: reconnectAttempts, max: 3 }))
         setTimeout(() => startSse(id), 2000)
       } else {
         reconnectAttempts = 0
-        addLog('❌', '多次重连失败，请刷新页面重试')
+        addLog('❌', t('article.create.log.reconnectFailed'))
         isCreating.value = false
       }
     }
@@ -402,7 +402,7 @@ function handleSseMessage(type: string, payload: string) {
   switch (type) {
     case 'AGENT1_COMPLETE':
       currentPhase.value = 'TITLE_GENERATING'
-      addLog('⏳', '正在生成标题方案...')
+      addLog('⏳', t('article.create.log.generatingTitles'))
       break
 
     case 'TITLES_GENERATED': {
@@ -415,7 +415,7 @@ function handleSseMessage(type: string, payload: string) {
       }
       currentPhase.value = 'TITLE_SELECTING'
       isCreating.value = false
-      addLog('✅', `标题方案已生成，共 ${titleOptions.value.length} 个，请选择`)
+      addLog('✅', t('article.create.log.titlesReady', { count: titleOptions.value.length }))
       break
     }
 
@@ -425,7 +425,7 @@ function handleSseMessage(type: string, payload: string) {
       break
 
     case 'AGENT2_COMPLETE':
-      addLog('✅', '大纲生成完成')
+      addLog('✅', t('article.create.log.outlineComplete'))
       break
 
     case 'OUTLINE_GENERATED': {
@@ -437,7 +437,7 @@ function handleSseMessage(type: string, payload: string) {
       }
       currentPhase.value = 'OUTLINE_EDITING'
       isCreating.value = false
-      addLog('✅', '大纲生成完成，请编辑确认')
+      addLog('✅', t('article.create.log.outlineReady'))
       break
     }
 
@@ -447,35 +447,35 @@ function handleSseMessage(type: string, payload: string) {
       break
 
     case 'AGENT3_COMPLETE':
-      addLog('✅', '正文生成完成')
+      addLog('✅', t('article.create.log.contentComplete'))
       break
 
     case 'AGENT4_COMPLETE':
-      addLog('✅', '配图需求分析完成')
+      addLog('✅', t('article.create.log.imageRequirementsComplete'))
       break
 
     case 'IMAGE_COMPLETE':
       try {
         const img = JSON.parse(payload)
-        addLog('🖼️', `配图就绪：${img.sectionTitle || '封面'}`, img.method)
+        addLog('🖼️', t('article.create.log.imageFetched', { title: img.sectionTitle || t('article.create.log.cover') }), img.method)
       } catch {
-        addLog('🖼️', '配图就绪')
+        addLog('🖼️', t('article.create.log.imageFetchedNoTitle'))
       }
       break
 
     case 'AGENT5_COMPLETE':
-      addLog('✅', '全部配图获取完成')
+      addLog('✅', t('article.create.log.imagesComplete'))
       break
 
     case 'MERGE_COMPLETE':
-      addLog('✅', '图文合成完成')
+      addLog('✅', t('article.create.log.mergeComplete'))
       break
 
     case 'ALL_COMPLETE':
       status.value = 'COMPLETED'
       isCreating.value = false
       currentPhase.value = 'COMPLETED'
-      addLog('🎉', '文章生成完成！')
+      addLog('🎉', t('article.create.log.articleComplete'))
       sseConn?.close()
       getArticleDetail(taskId.value).then(res => {
         const full = res.data?.fullContent || res.data?.content
@@ -486,7 +486,7 @@ function handleSseMessage(type: string, payload: string) {
     case 'ERROR':
       status.value = 'FAILED'
       isCreating.value = false
-      addLog('❌', `生成失败：${payload}`)
+      addLog('❌', t('article.create.log.generationFailed', { msg: payload }))
       sseConn?.close()
       currentPhase.value = 'INPUT'
       break
@@ -510,9 +510,9 @@ async function handleConfirmTitle(data: {
     article.value.subTitle = data.subTitle
     outlineRaw.value = ''
     isCreating.value = true
-    addLog('✅', '标题已确认，正在生成大纲...')
+    addLog('✅', t('article.create.log.titleConfirmed'))
   } catch (err: any) {
-    message.error(err?.message || '确认标题失败')
+    message.error(err?.message || t('article.create.confirmTitleError'))
   } finally {
     confirmLoading.value = false
   }
@@ -524,9 +524,9 @@ async function handleConfirmOutline(outlineData: OutlineSection[]) {
     await confirmOutline({ taskId: taskId.value, outline: outlineData })
     streamingContent.value = ''
     isCreating.value = true
-    addLog('✅', '大纲已确认，正在生成正文...')
+    addLog('✅', t('article.create.log.outlineConfirmed'))
   } catch (err: any) {
-    message.error(err?.message || '确认大纲失败')
+    message.error(err?.message || t('article.create.confirmOutlineError'))
   } finally {
     confirmLoading.value = false
   }
@@ -569,22 +569,22 @@ async function loadAndReconnect(id: string) {
       currentPhase.value = 'COMPLETED'
       const full = art.fullContent || art.content
       if (full) streamingContent.value = full
-      addLog('✅', '已加载完成的文章')
+      addLog('✅', t('article.create.log.articleLoaded'))
     } else if (art.status === 'FAILED') {
-      addLog('❌', `上次生成失败：${art.errorMessage || '未知错误'}`)
+      addLog('❌', t('article.create.log.prevFailed', { msg: art.errorMessage || t('common.unknownError') }))
     } else {
       // 直接从 REST 响应读 phase，无需等待 SSE round-trip
       if (art.phase === 'TITLE_SELECTING' && art.titleOptions?.length) {
         titleOptions.value = art.titleOptions
         currentPhase.value = 'TITLE_SELECTING'
-        addLog('🔄', `已恢复标题选择，共 ${titleOptions.value.length} 个方案`)
+        addLog('🔄', t('article.create.log.resumeTitleSelect', { count: titleOptions.value.length }))
       } else if (art.phase === 'OUTLINE_EDITING' && art.outline?.length) {
         outline.value = art.outline
         currentPhase.value = 'OUTLINE_EDITING'
-        addLog('🔄', '已恢复大纲编辑')
+        addLog('🔄', t('article.create.log.resumeOutlineEdit'))
       } else {
         isCreating.value = true
-        addLog('🔄', '检测到进行中的任务，正在恢复连接...')
+        addLog('🔄', t('article.create.log.resumingConnection'))
       }
       startSse(id)
     }

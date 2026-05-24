@@ -1,7 +1,7 @@
 <template>
   <a-layout class="list-page">
     <a-layout-header class="header">
-      <span class="logo">AI 爆款文章创作器</span>
+      <span class="logo">{{ t('home.title') }}</span>
       <a-space>
         <a-button type="primary" @click="router.push('/')">{{ t('article.list.newBtn') }}</a-button>
         <a-dropdown>
@@ -83,10 +83,10 @@
                   :disabled="record.status !== 'COMPLETED'"
                   @click="router.push(`/article/${record.taskId}`)"
                 >
-                  查看
+                  {{ t('article.list.viewBtn') }}
                 </a-button>
-                <a-popconfirm title="确定删除这篇文章吗？" @confirm="onDelete(record)">
-                  <a-button type="link" size="small" danger>删除</a-button>
+                <a-popconfirm :title="t('article.list.deleteConfirm')" @confirm="onDelete(record)">
+                  <a-button type="link" size="small" danger>{{ t('article.list.deleteBtn') }}</a-button>
                 </a-popconfirm>
               </a-space>
             </template>
@@ -98,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { useI18n } from 'vue-i18n'
@@ -116,13 +116,13 @@ const searchTopic = ref('')
 const searchStatus = ref<string | undefined>(undefined)
 const pagination = ref({ current: 1, pageSize: 10, total: 0 })
 
-const columns = [
-  { title: '选题', key: 'topic', dataIndex: 'topic', width: '25%' },
-  { title: '标题', key: 'mainTitle', dataIndex: 'mainTitle', width: '25%' },
-  { title: '状态', key: 'status', dataIndex: 'status', width: '10%' },
-  { title: '创建时间', key: 'createTime', dataIndex: 'createTime', width: '18%' },
-  { title: '操作', key: 'action', width: '12%' },
-]
+const columns = computed(() => [
+  { title: t('article.list.columns.topic'), key: 'topic', dataIndex: 'topic', width: '25%' },
+  { title: t('article.list.columns.mainTitle'), key: 'mainTitle', dataIndex: 'mainTitle', width: '25%' },
+  { title: t('article.list.columns.status'), key: 'status', dataIndex: 'status', width: '10%' },
+  { title: t('article.list.columns.createTime'), key: 'createTime', dataIndex: 'createTime', width: '18%' },
+  { title: t('article.list.columns.action'), key: 'action', width: '12%' },
+])
 
 function statusColor(s: string) {
   const map: Record<string, string> = {
@@ -159,7 +159,7 @@ function onPageChange(page: number, size: number) {
 async function onDelete(record: ArticleVO) {
   try {
     await deleteArticle(record.id)
-    message.success('删除成功')
+    message.success(t('article.list.deleteSuccess'))
     loadList()
   } catch {
     // error already handled by interceptor
