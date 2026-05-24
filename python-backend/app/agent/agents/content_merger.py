@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.schemas.article import ArticleState
-    from app.services.article_agent_service import ArticleAgentService
+    from app.services.article.article_agent_service import ArticleAgentService
 
 
 class ContentMergerAgent:

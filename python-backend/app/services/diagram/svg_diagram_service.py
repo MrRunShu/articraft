@@ -1,4 +1,4 @@
-import base64
+﻿import base64
 import logging
 import re
 from typing import Optional
@@ -7,7 +7,7 @@ from openai import AsyncOpenAI
 
 from app.config import settings
 from app.models.enums import ImageMethodEnum
-from app.services.image_search_service import ImageData, ImageRequest, ImageSearchService
+from app.services.image.image_search_service import ImageData, ImageRequest, ImageSearchService
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 
 from databases import Database
 from fastapi import APIRouter, Depends
@@ -17,10 +17,10 @@ from app.schemas.article import (
 )
 from app.schemas.common import BaseResponse, DeleteRequest
 from app.schemas.user import LoginUserVO
-from app.services.article_async_service import article_async_service
-from app.services.article_service import ArticleService
+from app.services.article.article_async_service import article_async_service
+from app.services.article.article_service import ArticleService
 from app.schemas.statistics import AgentExecutionStatsVO
-from app.services.agent_log_service import AgentLogService
+from app.services.analytics.agent_log_service import AgentLogService
 
 router = APIRouter(prefix="/article", tags=["文章管理"])
 

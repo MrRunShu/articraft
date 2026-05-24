@@ -83,3 +83,11 @@ credentials/
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+
+# ===== 本地运维脚本（仅本机使用，路径 & 端口因人而异）=====
+start.ps1
+stop.ps1
+status.ps1
+启动项目.bat
+停止项目.bat
+检测状态.bat

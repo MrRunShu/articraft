@@ -1,4 +1,4 @@
-import json
+﻿import json
 import logging
 import uuid
 from datetime import datetime
@@ -193,7 +193,7 @@ class ArticleService:
 
         current_outline = [OutlineSection(**item) for item in json.loads(article["outline"])]
 
-        from app.services.article_agent_service import ArticleAgentService
+        from app.services.article.article_agent_service import ArticleAgentService
         agent_service = ArticleAgentService()
         modified_outline = await agent_service.ai_modify_outline(
             main_title=article["mainTitle"],

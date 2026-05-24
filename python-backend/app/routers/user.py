@@ -1,4 +1,4 @@
-from typing import Optional
+﻿from typing import Optional
 from fastapi import APIRouter, Depends, Response
 from databases import Database
 
@@ -13,7 +13,7 @@ from app.schemas.user import (
     UserVO,
     LoginUserVO,
 )
-from app.services.user_service import UserService
+from app.services.user.user_service import UserService
 from app.deps import get_current_user, require_login, require_admin, generate_session_id
 from app.utils.session import set_session, remove_session, bind_user_session
 from app.config import settings

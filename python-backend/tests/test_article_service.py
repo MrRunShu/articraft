@@ -1,4 +1,4 @@
-"""
+﻿"""
 DB 集成测试：ArticleService CRUD
 需要 MySQL 连接，运行前确保本地 MySQL 已启动且 .env 配置正确
 """
@@ -8,7 +8,7 @@ from app.database import database
 from app.models.enums import ArticleStatusEnum
 from app.schemas.article import ArticleState, TitleResult, OutlineResult, OutlineSection, ImageResult
 from app.schemas.user import LoginUserVO
-from app.services.article_service import ArticleService
+from app.services.article.article_service import ArticleService
 
 
 # ---- fixtures ----

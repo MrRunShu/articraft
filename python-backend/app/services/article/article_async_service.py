@@ -1,4 +1,4 @@
-import json
+﻿import json
 import logging
 from typing import Optional
 
@@ -6,8 +6,8 @@ from app.database import database
 from app.managers.sse_manager import sse_emitter_manager
 from app.models.enums import ArticlePhaseEnum, ArticleStatusEnum, SseMessageTypeEnum
 from app.schemas.article import ArticleState, OutlineResult, OutlineSection, TitleResult
-from app.services.article_agent_service import ArticleAgentService
-from app.services.article_service import ArticleService
+from app.services.article.article_agent_service import ArticleAgentService
+from app.services.article.article_service import ArticleService
 
 logger = logging.getLogger(__name__)
 

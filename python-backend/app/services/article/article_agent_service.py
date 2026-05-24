@@ -21,8 +21,8 @@ from app.schemas.article import (
 )
 from app.agent.orchestrator import ArticleAgentOrchestrator
 from app.agent.parallel.image_generator import ParallelImageGenerator
-from app.services.cos_service import CosService
-from app.services.image_strategy_service import ImageServiceStrategy
+from app.services.image.cos_service import CosService
+from app.services.image.image_strategy_service import ImageServiceStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class ArticleAgentService:
         self.image_service_strategy = ImageServiceStrategy()
         self.cos_service = CosService()
         # 延迟导入避免循环依赖
-        from app.services.agent_log_service import AgentLogService
+        from app.services.analytics.agent_log_service import AgentLogService
         self.agent_log_service = AgentLogService(database)
         self.parallel_image_generator = ParallelImageGenerator(
             image_strategy=self.image_service_strategy,

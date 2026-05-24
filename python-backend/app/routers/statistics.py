@@ -1,4 +1,4 @@
-from databases import Database
+﻿from databases import Database
 from fastapi import APIRouter, Depends
 
 from app.database import get_db
@@ -6,7 +6,7 @@ from app.deps import require_admin
 from app.schemas.common import BaseResponse
 from app.schemas.statistics import StatisticsVO
 from app.schemas.user import LoginUserVO
-from app.services.statistics_service import StatisticsService
+from app.services.analytics.statistics_service import StatisticsService
 
 router = APIRouter(prefix="/statistics", tags=["统计分析"])
 

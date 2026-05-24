@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING, Callable
@@ -13,7 +13,7 @@ from app.models.enums import SseMessageTypeEnum
 
 if TYPE_CHECKING:
     from app.schemas.article import ArticleState
-    from app.services.article_agent_service import ArticleAgentService
+    from app.services.article.article_agent_service import ArticleAgentService
 
 logger = logging.getLogger(__name__)
 

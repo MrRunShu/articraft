@@ -1,13 +1,13 @@
-import logging
+﻿import logging
 from typing import Optional
 
 from app.models.enums import ImageMethodEnum
-from app.services.emoji_pack_service import EmojiPackService
-from app.services.iconify_service import IconifyService
-from app.services.image_search_service import ImageData, ImageRequest, ImageSearchService
-from app.services.mermaid_service import MermaidService
-from app.services.nano_banana_service import NanoBananaService
-from app.services.pexels_service import PexelsService
+from app.services.diagram.emoji_pack_service import EmojiPackService
+from app.services.diagram.iconify_service import IconifyService
+from app.services.image.image_search_service import ImageData, ImageRequest, ImageSearchService
+from app.services.diagram.mermaid_service import MermaidService
+from app.services.image.nano_banana_service import NanoBananaService
+from app.services.image.pexels_service import PexelsService
 logger = logging.getLogger(__name__)
 
 

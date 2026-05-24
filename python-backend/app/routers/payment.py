@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+﻿from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from databases import Database
 
 from app.database import get_db
@@ -6,7 +6,7 @@ from app.deps import require_login
 from app.schemas.common import BaseResponse
 from app.schemas.payment import CheckoutVO, CreateCheckoutRequest
 from app.schemas.user import LoginUserVO
-from app.services.payment_service import PaymentService
+from app.services.user.payment_service import PaymentService
 
 router = APIRouter(prefix="/payment", tags=["支付管理"])
 

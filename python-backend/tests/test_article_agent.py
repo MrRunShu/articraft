@@ -1,12 +1,12 @@
-import json
+﻿import json
 import pytest
-from app.services.article_agent_service import ArticleAgentService
+from app.services.article.article_agent_service import ArticleAgentService
 from app.schemas.article import ArticleState
 
 
 def make_agent_service():
     """创建 ArticleAgentService 实例但跳过 __init__（避免读取 config）"""
-    from app.services.article_agent_service import ArticleAgentService
+    from app.services.article.article_agent_service import ArticleAgentService
     svc = ArticleAgentService.__new__(ArticleAgentService)
     return svc
 

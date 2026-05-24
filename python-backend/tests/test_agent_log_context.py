@@ -1,11 +1,11 @@
-import pytest
+﻿import pytest
 from unittest.mock import MagicMock, AsyncMock
 
 
 @pytest.mark.asyncio
 async def test_context_records_success():
     """成功执行时 status=SUCCESS，save_log_async 被调用"""
-    from app.services.article_agent_service import ArticleAgentService
+    from app.services.article.article_agent_service import ArticleAgentService
 
     svc = ArticleAgentService.__new__(ArticleAgentService)
     mock_log_svc = MagicMock()
@@ -30,7 +30,7 @@ async def test_context_records_success():
 @pytest.mark.asyncio
 async def test_context_records_failure():
     """抛出异常时 status=FAILED，异常被重新抛出"""
-    from app.services.article_agent_service import ArticleAgentService
+    from app.services.article.article_agent_service import ArticleAgentService
 
     svc = ArticleAgentService.__new__(ArticleAgentService)
     svc.agent_log_service = MagicMock()
@@ -46,7 +46,7 @@ async def test_context_records_failure():
 
 def test_context_sync_records_success():
     """同步版上下文管理器成功执行时 status=SUCCESS"""
-    from app.services.article_agent_service import ArticleAgentService
+    from app.services.article.article_agent_service import ArticleAgentService
 
     svc = ArticleAgentService.__new__(ArticleAgentService)
     svc.agent_log_service = MagicMock()

@@ -1,12 +1,12 @@
-import asyncio
+﻿import asyncio
 import logging
 from typing import List, Tuple
 
 from app.models.enums import ImageMethodEnum
 from app.schemas.article import ImageRequirement
-from app.services.cos_service import CosService
-from app.services.image_search_service import ImageData, ImageRequest
-from app.services.image_strategy_service import ImageServiceStrategy
+from app.services.image.cos_service import CosService
+from app.services.image.image_search_service import ImageData, ImageRequest
+from app.services.image.image_strategy_service import ImageServiceStrategy
 
 logger = logging.getLogger(__name__)
 
