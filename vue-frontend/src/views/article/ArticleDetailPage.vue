@@ -1,12 +1,6 @@
 <template>
   <a-layout class="detail-page">
-    <a-layout-header class="header">
-      <span class="logo">AI 爆款文章创作器</span>
-      <a-space>
-        <a-button type="link" style="color:#fff" @click="router.push('/article/list')">{{ t('article.list.title') }}</a-button>
-        <a-button type="link" style="color:#fff" @click="router.push('/')">{{ t('article.list.newBtn') }}</a-button>
-      </a-space>
-    </a-layout-header>
+    <AppHeader />
 
     <a-layout-content class="main">
       <a-spin :spinning="loading">
@@ -132,6 +126,7 @@ import { useI18n } from 'vue-i18n'
 import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons-vue'
 import { getArticleDetail, type ArticleVO, getExecutionLogs, type AgentExecutionStatsVO } from '@/api/article'
 import { renderMarkdown } from '@/utils/markdown'
+import AppHeader from '@/components/AppHeader.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -223,18 +218,6 @@ onMounted(load)
 .detail-page {
   min-height: 100vh;
   background: #f0f2f5;
-}
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #001529;
-  padding: 0 24px;
-}
-.logo {
-  color: #fff;
-  font-size: 18px;
-  font-weight: bold;
 }
 .main {
   padding: 24px;

@@ -1,12 +1,6 @@
 <template>
   <a-layout class="stats-page">
-    <a-layout-header class="header">
-      <span class="logo" @click="router.push('/')">{{ t('nav.title') }}</span>
-      <a-space>
-        <a-button type="link" style="color:#fff" @click="router.push('/')">{{ t('nav.create') }}</a-button>
-        <a-button type="link" style="color:#fff" @click="router.push('/article/list')">{{ t('nav.articles') }}</a-button>
-      </a-space>
-    </a-layout-header>
+    <AppHeader />
 
     <a-layout-content class="main">
       <div class="page-header">
@@ -88,14 +82,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
 import { getStatisticsOverview, type StatisticsVO } from '@/api/statistics'
+import AppHeader from '@/components/AppHeader.vue'
 
 const { t } = useI18n()
-const router = useRouter()
 const loading = ref(false)
 const stats = ref<StatisticsVO | null>(null)
 
@@ -248,19 +241,6 @@ onUnmounted(() => {
 .stats-page {
   min-height: 100vh;
   background: #f0f2f5;
-}
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #001529;
-  padding: 0 24px;
-}
-.logo {
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
-  cursor: pointer;
 }
 .main {
   padding: 24px;
