@@ -89,9 +89,9 @@ class ArticleAgentService:
 
     async def agent1_generate_title_options(self, state: ArticleState):
         """智能体1：生成标题方案（3-5个）"""
-        style_instruction = PromptConstant.get_style_instruction(state.style)
+        style_instruction = PromptConstant.get_style_instruction(state.style, state.language)
         prompt = (
-            PromptConstant.AGENT1_TITLE_PROMPT
+            PromptConstant.get("AGENT1_TITLE_PROMPT", state.language)
             .replace("{topic}", state.topic)
             .replace("{styleInstruction}", style_instruction)
         )
@@ -113,13 +113,13 @@ class ArticleAgentService:
         """智能体2：生成大纲（流式输出，支持补充描述）"""
         description_section = ""
         if state.user_description and state.user_description.strip():
-            description_section = PromptConstant.AGENT2_DESCRIPTION_SECTION.replace(
+            description_section = PromptConstant.get("AGENT2_DESCRIPTION_SECTION", state.language).replace(
                 "{userDescription}", state.user_description
             )
 
-        style_instruction = PromptConstant.get_style_instruction(state.style)
+        style_instruction = PromptConstant.get_style_instruction(state.style, state.language)
         prompt = (
-            PromptConstant.AGENT2_OUTLINE_PROMPT
+            PromptConstant.get("AGENT2_OUTLINE_PROMPT", state.language)
             .replace("{mainTitle}", state.title.main_title)
             .replace("{subTitle}", state.title.sub_title)
             .replace("{descriptionSection}", description_section)
@@ -152,9 +152,9 @@ class ArticleAgentService:
         outline_text = json.dumps(
             [s.model_dump() for s in state.outline.sections], ensure_ascii=False
         )
-        style_instruction = PromptConstant.get_style_instruction(state.style)
+        style_instruction = PromptConstant.get_style_instruction(state.style, state.language)
         prompt = (
-            PromptConstant.AGENT3_CONTENT_PROMPT
+            PromptConstant.get("AGENT3_CONTENT_PROMPT", state.language)
             .replace("{styleInstruction}", style_instruction)
             .replace("{mainTitle}", state.title.main_title)
             .replace("{subTitle}", state.title.sub_title)
@@ -178,7 +178,7 @@ class ArticleAgentService:
     async def agent4_analyze_image_requirements(self, state: ArticleState):
         """智能体4：分析配图需求并智能选择配图方式"""
         prompt = (
-            PromptConstant.AGENT4_IMAGE_REQUIREMENTS_PROMPT
+            PromptConstant.get("AGENT4_IMAGE_REQUIREMENTS_PROMPT", state.language)
             .replace("{mainTitle}", state.title.main_title)
             .replace("{content}", state.content)
         )
@@ -271,7 +271,7 @@ class ArticleAgentService:
             ensure_ascii=False,
         )
         prompt = (
-            PromptConstant.AI_MODIFY_OUTLINE_PROMPT
+            PromptConstant.get("AI_MODIFY_OUTLINE_PROMPT", language)
             .replace("{mainTitle}", main_title)
             .replace("{subTitle}", sub_title)
             .replace("{currentOutline}", current_outline_json)
