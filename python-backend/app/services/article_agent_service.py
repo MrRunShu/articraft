@@ -9,7 +9,7 @@ from openai import AsyncOpenAI
 from app.config import settings
 from app.constants.prompt import PromptConstant
 from app.database import database
-from app.models.enums import ImageMethodEnum, SseMessageTypeEnum
+from app.models.enums import SseMessageTypeEnum
 from app.schemas.article import (
     ArticleState,
     ImageRequirement,
@@ -22,7 +22,6 @@ from app.schemas.article import (
 from app.agent.orchestrator import ArticleAgentOrchestrator
 from app.agent.parallel.image_generator import ParallelImageGenerator
 from app.services.cos_service import CosService
-from app.services.image_search_service import ImageRequest
 from app.services.image_strategy_service import ImageServiceStrategy
 
 logger = logging.getLogger(__name__)
