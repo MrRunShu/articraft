@@ -263,6 +263,7 @@ class ArticleAgentService:
         current_outline: List[OutlineSection],
         modify_suggestion: str,
         task_id: Optional[str] = None,
+        language: str = 'zh',   # 新增
     ) -> List[OutlineSection]:
         """AI 修改大纲（同步返回修改结果）"""
         current_outline_json = json.dumps(

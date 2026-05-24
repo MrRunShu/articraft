@@ -33,6 +33,7 @@ class ArticleService:
         login_user: LoginUserVO,
         style: str = "POPULAR",
         enabled_image_methods: Optional[List[str]] = None,
+        language: str = 'zh',   # 新增
     ) -> str:
         """创建文章任务，返回 taskId"""
         if login_user.user_role not in (UserConstant.VIP_ROLE, UserConstant.ADMIN_ROLE):
@@ -58,6 +59,7 @@ class ArticleService:
                 user_id=login_user.id,
                 topic=topic,
                 style=style,
+                language=language,   # 新增
                 status=ArticleStatusEnum.PENDING.value,
                 phase=ArticlePhaseEnum.PENDING.value,
                 enabled_image_methods=(
@@ -201,6 +203,7 @@ class ArticleService:
             current_outline=current_outline,
             modify_suggestion=modify_suggestion,
             task_id=task_id,
+            language=article.get("language", "zh"),   # 新增
         )
         await self.db.execute(
             update(Article).where(Article.task_id == task_id).values(

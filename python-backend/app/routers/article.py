@@ -39,9 +39,10 @@ async def create_article(
         current_user,
         style,
         request.enabled_image_methods,
+        request.language,   # 新增
     )
     asyncio.create_task(
-        article_async_service.execute_phase1(task_id, request.topic, style)
+        article_async_service.execute_phase1(task_id, request.topic, style, request.language)
     )
     return BaseResponse.success(data=task_id, message="任务创建成功")
 

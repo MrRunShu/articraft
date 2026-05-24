@@ -27,6 +27,7 @@ class ArticleAsyncService:
         task_id: str,
         topic: str,
         style: Optional[str] = None,
+        language: str = 'zh',   # 新增
     ):
         """阶段1：异步生成标题方案"""
         logger.info("阶段1异步任务开始, taskId=%s", task_id)
@@ -41,6 +42,7 @@ class ArticleAsyncService:
             state.task_id = task_id
             state.topic = topic
             state.style = style or "POPULAR"
+            state.language = language   # 新增
 
             await article_agent_service.execute_phase1_generate_titles(
                 state,
@@ -80,6 +82,7 @@ class ArticleAsyncService:
             state = ArticleState()
             state.task_id = task_id
             state.style = article["style"] or "POPULAR"
+            state.language = article.get("language", "zh")   # 新增
             state.user_description = article["userDescription"]
             state.title = TitleResult(
                 mainTitle=article["mainTitle"],
@@ -133,6 +136,7 @@ class ArticleAsyncService:
             state = ArticleState()
             state.task_id = task_id
             state.style = article["style"] or "POPULAR"
+            state.language = article.get("language", "zh")   # 新增
             state.enabled_image_methods = enabled_methods
             state.title = TitleResult(
                 mainTitle=article["mainTitle"],
