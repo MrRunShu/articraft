@@ -74,16 +74,20 @@ class ArticleAgentOrchestrator:
         logger.info("阶段3：开始生成正文, taskId=%s", state.task_id)
         await self.content_agent.run(service, state, stream_context.emit)
         stream_context.emit(SseMessageTypeEnum.AGENT3_COMPLETE.value)
+        logger.info("阶段3：正文生成成功, taskId=%s", state.task_id)
 
         logger.info("阶段3：开始分析配图需求, taskId=%s", state.task_id)
         await self.image_analyzer_agent.run(service, state)
         stream_context.emit(SseMessageTypeEnum.AGENT4_COMPLETE.value)
+        logger.info("阶段3：配图需求分析成功, taskId=%s", state.task_id)
 
         # agent5 保留在 service 中（与 SSE 推送深度交互）
         logger.info("阶段3：开始生成配图, taskId=%s", state.task_id)
         await service.agent5_generate_images(state, stream_context.emit)
         stream_context.emit(SseMessageTypeEnum.AGENT5_COMPLETE.value)
+        logger.info("阶段3：配图生成成功, taskId=%s", state.task_id)
 
         logger.info("阶段3：开始图文合成, taskId=%s", state.task_id)
         self.content_merger_agent.run(service, state)
         stream_context.emit(SseMessageTypeEnum.MERGE_COMPLETE.value)
+        logger.info("阶段3：图文合成成功, taskId=%s", state.task_id)
