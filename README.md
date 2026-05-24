@@ -197,6 +197,12 @@ articraft/
 
 ---
 
+## 示例输出
+
+[`docs/articles/第7次敲门声后，我不敢再呼吸.md`](docs/articles/第7次敲门声后，我不敢再呼吸.md) — 一篇由本平台生成的完整文章，含标题、大纲、正文与配图。
+
+---
+
 ## License
 
 [MIT](LICENSE)
