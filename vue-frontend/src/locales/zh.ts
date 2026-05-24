@@ -1,6 +1,8 @@
 // src/locales/zh.ts
 export default {
   nav: {
+    title: 'AI 爆款文章创作器',
+    create: '创作',
     articles: '文章列表',
     vip: '会员中心',
     stats: '统计',
@@ -187,6 +189,32 @@ export default {
   },
   stats: {
     title: '智能体统计',
+    refresh: '刷新数据',
+    loadError: '加载统计数据失败',
+    today: '今日创作',
+    week: '本周创作',
+    month: '本月创作',
+    successRate: '成功率',
+    trendCard: '创作趋势',
+    performanceCard: '性能统计',
+    userCard: '用户分析',
+    quotaCard: '配额使用情况',
+    avgDuration: '平均创作耗时',
+    totalCount: '总创作数',
+    totalCountUnit: '篇',
+    activeUsers: '本周活跃用户',
+    activeUsersUnit: '人',
+    chart: {
+      trendLabels: ['今日', '本周', '本月', '总计'],
+      trendSeries: '创作数量',
+      userSeries: '用户分布',
+      vipUsers: 'VIP 会员',
+      activeUsers: '活跃用户',
+      otherUsers: '其他用户',
+      quotaSeries: '配额统计',
+      quotaUsed: '已使用',
+      quotaRemaining: '剩余',
+    },
   },
   common: {
     loading: '加载中...',

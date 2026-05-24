@@ -1,6 +1,8 @@
 // src/locales/en.ts
 export default {
   nav: {
+    title: 'AI Article Creator',
+    create: 'Create',
     articles: 'My Articles',
     vip: 'Membership',
     stats: 'Statistics',
@@ -187,6 +189,32 @@ export default {
   },
   stats: {
     title: 'Agent Statistics',
+    refresh: 'Refresh',
+    loadError: 'Failed to load statistics',
+    today: 'Today',
+    week: 'This Week',
+    month: 'This Month',
+    successRate: 'Success Rate',
+    trendCard: 'Creation Trend',
+    performanceCard: 'Performance',
+    userCard: 'User Analysis',
+    quotaCard: 'Quota Usage',
+    avgDuration: 'Avg. Duration',
+    totalCount: 'Total Articles',
+    totalCountUnit: '',
+    activeUsers: 'Active Users (Week)',
+    activeUsersUnit: '',
+    chart: {
+      trendLabels: ['Today', 'Week', 'Month', 'Total'],
+      trendSeries: 'Articles',
+      userSeries: 'User Distribution',
+      vipUsers: 'VIP',
+      activeUsers: 'Active',
+      otherUsers: 'Others',
+      quotaSeries: 'Quota',
+      quotaUsed: 'Used',
+      quotaRemaining: 'Remaining',
+    },
   },
   common: {
     loading: 'Loading...',

@@ -1,41 +1,41 @@
 <template>
   <a-layout class="stats-page">
     <a-layout-header class="header">
-      <span class="logo" @click="router.push('/')">AI 爆款文章创作器</span>
+      <span class="logo" @click="router.push('/')">{{ t('nav.title') }}</span>
       <a-space>
-        <a-button type="link" style="color:#fff" @click="router.push('/')">创作</a-button>
-        <a-button type="link" style="color:#fff" @click="router.push('/article/list')">我的文章</a-button>
+        <a-button type="link" style="color:#fff" @click="router.push('/')">{{ t('nav.create') }}</a-button>
+        <a-button type="link" style="color:#fff" @click="router.push('/article/list')">{{ t('nav.articles') }}</a-button>
       </a-space>
     </a-layout-header>
 
     <a-layout-content class="main">
       <div class="page-header">
         <h1 class="page-title">{{ t('stats.title') }}</h1>
-        <a-button @click="loadData" :loading="loading">刷新数据</a-button>
+        <a-button @click="loadData" :loading="loading">{{ t('stats.refresh') }}</a-button>
       </div>
 
-      <a-spin :spinning="loading" tip="加载中...">
+      <a-spin :spinning="loading" :tip="t('common.loading')">
         <!-- 4 张概览卡片 -->
         <a-row :gutter="16" style="margin-bottom:24px">
           <a-col :span="6">
             <a-card :bordered="false" class="stat-card">
-              <a-statistic title="今日创作" :value="stats?.todayCount ?? 0" />
+              <a-statistic :title="t('stats.today')" :value="stats?.todayCount ?? 0" />
             </a-card>
           </a-col>
           <a-col :span="6">
             <a-card :bordered="false" class="stat-card">
-              <a-statistic title="本周创作" :value="stats?.weekCount ?? 0" />
+              <a-statistic :title="t('stats.week')" :value="stats?.weekCount ?? 0" />
             </a-card>
           </a-col>
           <a-col :span="6">
             <a-card :bordered="false" class="stat-card">
-              <a-statistic title="本月创作" :value="stats?.monthCount ?? 0" />
+              <a-statistic :title="t('stats.month')" :value="stats?.monthCount ?? 0" />
             </a-card>
           </a-col>
           <a-col :span="6">
             <a-card :bordered="false" class="stat-card">
               <a-statistic
-                title="成功率"
+                :title="t('stats.successRate')"
                 :value="stats?.successRate ?? 0"
                 :precision="1"
                 suffix="%"
@@ -47,21 +47,21 @@
         <!-- 图表区：创作趋势 + 性能统计 -->
         <a-row :gutter="16" style="margin-bottom:24px">
           <a-col :span="16">
-            <a-card title="创作趋势" :bordered="false">
+            <a-card :title="t('stats.trendCard')" :bordered="false">
               <div ref="trendChartRef" style="height:280px" />
             </a-card>
           </a-col>
           <a-col :span="8">
-            <a-card title="性能统计" :bordered="false" style="height:100%">
+            <a-card :title="t('stats.performanceCard')" :bordered="false" style="height:100%">
               <a-descriptions layout="vertical" :column="1">
-                <a-descriptions-item label="平均创作耗时">
+                <a-descriptions-item :label="t('stats.avgDuration')">
                   {{ formatDuration(stats?.avgDurationMs ?? 0) }}
                 </a-descriptions-item>
-                <a-descriptions-item label="总创作数">
-                  {{ stats?.totalCount ?? 0 }} 篇
+                <a-descriptions-item :label="t('stats.totalCount')">
+                  {{ stats?.totalCount ?? 0 }}{{ t('stats.totalCountUnit') }}
                 </a-descriptions-item>
-                <a-descriptions-item label="本周活跃用户">
-                  {{ stats?.activeUserCount ?? 0 }} 人
+                <a-descriptions-item :label="t('stats.activeUsers')">
+                  {{ stats?.activeUserCount ?? 0 }}{{ t('stats.activeUsersUnit') }}
                 </a-descriptions-item>
               </a-descriptions>
             </a-card>
@@ -71,12 +71,12 @@
         <!-- 图表区：用户分析 + 配额使用 -->
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-card title="用户分析" :bordered="false">
+            <a-card :title="t('stats.userCard')" :bordered="false">
               <div ref="userChartRef" style="height:280px" />
             </a-card>
           </a-col>
           <a-col :span="12">
-            <a-card title="配额使用情况" :bordered="false">
+            <a-card :title="t('stats.quotaCard')" :bordered="false">
               <div ref="quotaChartRef" style="height:280px" />
             </a-card>
           </a-col>
@@ -121,7 +121,7 @@ async function loadData() {
       renderQuotaChart()
     }, 100)
   } catch (err) {
-    message.error((err as Error).message || '加载统计数据失败')
+    message.error((err as Error).message || t('stats.loadError'))
   } finally {
     loading.value = false
   }
@@ -137,7 +137,7 @@ function renderTrendChart() {
     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
     xAxis: {
       type: 'category',
-      data: ['今日', '本周', '本月', '总计'],
+      data: t('stats.chart.trendLabels') as unknown as string[],
       axisLine: { lineStyle: { color: '#E2E8F0' } },
       axisLabel: { color: '#64748B' },
     },
@@ -148,7 +148,7 @@ function renderTrendChart() {
       axisLabel: { color: '#64748B' },
     },
     series: [{
-      name: '创作数量',
+      name: t('stats.chart.trendSeries'),
       type: 'bar',
       data: [
         stats.value.todayCount,
@@ -179,16 +179,16 @@ function renderUserChart() {
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
     legend: { orient: 'vertical', right: '10%', top: 'center', textStyle: { color: '#64748B' } },
     series: [{
-      name: '用户分布',
+      name: t('stats.chart.userSeries'),
       type: 'pie',
       radius: ['40%', '70%'],
       itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
       label: { show: false },
       emphasis: { label: { show: true, fontSize: 16, fontWeight: 'bold' } },
       data: [
-        { value: stats.value.vipUserCount, name: 'VIP 会员', itemStyle: { color: '#22C55E' } },
-        { value: stats.value.activeUserCount, name: '活跃用户', itemStyle: { color: '#3B82F6' } },
-        { value: others, name: '其他用户', itemStyle: { color: '#94A3B8' } },
+        { value: stats.value.vipUserCount, name: t('stats.chart.vipUsers'), itemStyle: { color: '#22C55E' } },
+        { value: stats.value.activeUserCount, name: t('stats.chart.activeUsers'), itemStyle: { color: '#3B82F6' } },
+        { value: others, name: t('stats.chart.otherUsers'), itemStyle: { color: '#94A3B8' } },
       ],
     }],
   })
@@ -203,12 +203,12 @@ function renderQuotaChart() {
   quotaChart.setOption({
     tooltip: { trigger: 'item' },
     series: [{
-      name: '配额统计',
+      name: t('stats.chart.quotaSeries'),
       type: 'pie',
       radius: '70%',
       data: [
-        { value: used, name: '已使用', itemStyle: { color: '#EF4444' } },
-        { value: remaining, name: '剩余', itemStyle: { color: '#22C55E' } },
+        { value: used, name: t('stats.chart.quotaUsed'), itemStyle: { color: '#EF4444' } },
+        { value: remaining, name: t('stats.chart.quotaRemaining'), itemStyle: { color: '#22C55E' } },
       ],
       emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } },
       label: { formatter: '{b}: {c}' },
