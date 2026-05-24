@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import i18n from '@/plugins/i18n'
 
 export interface ArticleVO {
   id: number
@@ -37,6 +38,7 @@ export interface ArticleCreateRequest {
   topic: string
   style?: string
   enabledImageMethods?: string[]
+  language?: string
 }
 
 export const ARTICLE_STYLES = [
@@ -57,7 +59,8 @@ export const IMAGE_METHOD_LABELS: Record<string, string> = {
 }
 
 export function createArticle(params: ArticleCreateRequest) {
-  return request.post<any, { data: string }>('/article/create', params)
+  const language = (i18n.global.locale as any).value ?? 'zh'
+  return request.post<any, { data: string }>('/article/create', { ...params, language })
 }
 
 export function getArticleDetail(taskId: string) {
